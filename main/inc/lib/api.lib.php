@@ -2040,8 +2040,8 @@ function api_get_session_date_validation($session_info, $course_code, $ignore_vi
 
                 //Test start date
                 if (isset($session_info['access_start_date']) && !empty($session_info['access_start_date']) && $session_info['access_start_date'] != '0000-00-00 00:00:00' &&
-                    isset($session_info['coach_start_date']) && !empty($session_info['coach_start_date']) && $session_info['coach_start_date'] != '0000-00-00 00:00:00') {
-                    $start_date_for_coach = api_strtotime($session_info['coach_start_date'], 'UTC');
+                    isset($session_info['coach_access_start_date']) && !empty($session_info['coach_access_start_date']) && $session_info['coach_access_start_date'] != '0000-00-00 00:00:00') {
+                    $start_date_for_coach = api_strtotime($session_info['coach_access_start_date'], 'UTC');
                     if ($now > $start_date_for_coach) {
                         $access = true;
                     } else {
