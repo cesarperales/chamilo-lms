@@ -28,15 +28,11 @@ class Login
      */
     public static function get_user_account_list($user, $reset = false, $by_username = false)
     {
-        global $_configuration;
         $portal_url = api_get_path(WEB_PATH);
 
-        if ($_configuration['multiple_access_urls']) {
-            $access_url_id = api_get_current_access_url_id();
-            if ($access_url_id != -1) {
-                $url = api_get_access_url($access_url_id);
-                $portal_url = $url['url'];
-            }
+        if (api_is_multiple_url_enabled()) {
+            $url = api_get_current_access_url_info();
+            $portal_url = $url['url'];
         }
 
         if ($reset) {
@@ -125,6 +121,7 @@ class Login
      * @author Olivier Cauberghe <olivier.cauberghe@UGent.be>, Ghent University
      */
     public static function handle_encrypted_password($user, $by_username = false) {
+        global $_configuration;
         $email_subject = "[" . api_get_setting('siteName') . "] " . get_lang('LoginRequest'); // SUBJECT
 
         if ($by_username) { // Show only for lost password
@@ -134,6 +131,8 @@ class Login
             $user_account_list = self::get_user_account_list($user, true); // BODY
             $email_to = $user[0]['email'];
         }
+
+        $secret_word = self::get_secret_word($email_to);
         $email_body = get_lang('DearUser') . " :\n" . get_lang('password_request') . "\n";
         $email_body .= $user_account_list . "\n-----------------------------------------------\n\n";
         $email_body .= get_lang('PasswordEncryptedForSecurity');
@@ -144,6 +143,7 @@ class Login
         $email_admin = api_get_setting('emailAdministrator');
 
         if (@api_mail_html('', $email_to, $email_subject, $email_body, $sender_name, $email_admin) == 1) {
+
             if (CustomPages::enabled()) {
                 return get_lang('YourPasswordHasBeenEmailed');
             } else {
@@ -222,7 +222,7 @@ class Login
                 // a uid is given (log in succeeded)
                 $user_table = Database::get_main_table(TABLE_MAIN_USER);
                 $admin_table = Database::get_main_table(TABLE_MAIN_ADMIN);
-                $track_e_login = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_LOGIN);
+                $track_e_login = Database::get_main_table(TABLE_STATISTIC_TRACK_E_LOGIN);
 
                 $sql = "SELECT user.*, a.user_id is_admin, UNIX_TIMESTAMP(login.login_date) login_date
                         FROM $user_table
@@ -253,7 +253,7 @@ class Login
                     $_user['status'] = $uData['status'];
 
                     $is_platformAdmin = (bool) (!is_null($uData['is_admin']));
-                    $is_allowedCreateCourse = (bool) (($uData ['status'] == 1) or (api_get_setting('drhCourseManagerRights') and $uData['status'] == 4));
+                    $is_allowedCreateCourse = (bool) (($uData['status'] == COURSEMANAGER) or (api_get_setting('drhCourseManagerRights') and $uData['status'] == DRH));
                     ConditionalLogin::check_conditions($uData);
 
                     Session::write('_user', $_user);
@@ -317,7 +317,7 @@ class Login
         global $_user;
 
         global $_cid;
-        global $_course;
+        $_course = api_get_course_info();
         global $_real_cid;
         global $_courseUser;
 
@@ -357,7 +357,7 @@ class Login
                     $_course['path'] = $course_data['directory']; // use as key in path
                     $_course['dbName'] = $course_data['db_name']; // use as key in db list
                     $_course['db_name'] = $course_data['db_name']; // not needed in Chamilo 1.9
-                    $_course['dbNameGlu'] = $_configuration['table_prefix'] . $course_data['db_name'] . $_configuration['db_glue']; // use in all queries //not needed in Chamilo 1.9
+                    //$_course['dbNameGlu'] = $_configuration['table_prefix'] . $course_data['db_name'] . $_configuration['db_glue']; // use in all queries //not needed in Chamilo 1.9
                     $_course['titular'] = $course_data['tutor_name']; // this should be deprecated and use the table course_rel_user
                     $_course['language'] = $course_data['course_language'];
                     $_course['extLink']['url'] = $course_data['department_url'];
@@ -380,8 +380,6 @@ class Login
 
                     // Database Table Definitions
                     $tbl_session = Database::get_main_table(TABLE_MAIN_SESSION);
-                    $tbl_session_course = Database::get_main_table(TABLE_MAIN_SESSION_COURSE);
-                    $tbl_session_course_user = Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
 
                     if (!empty($_GET['id_session'])) {
                         $_SESSION['id_session'] = intval($_GET['id_session']);
@@ -396,7 +394,7 @@ class Login
                     if (!isset($_SESSION['login_as'])) {
                         //Course login
                         if (isset($_user['user_id'])) {
-                            event_course_login($_course['sysCode'], $_user['user_id'], api_get_session_id());
+                            event_course_login($_real_cid, $_user['user_id'], api_get_session_id());
                         }
                     }
                 } else {
@@ -454,7 +452,7 @@ class Login
                     }
 
                     if ($save_course_access) {
-                        $course_tracking_table = Database :: get_statistic_table(TABLE_STATISTIC_TRACK_E_COURSE_ACCESS);
+                        $course_tracking_table = Database :: get_main_table(TABLE_STATISTIC_TRACK_E_COURSE_ACCESS);
 
                         /*
                          * When $_configuration['session_lifetime'] is too big 100 hours (in order to let users take exercises with no problems)
@@ -480,10 +478,10 @@ class Login
                             //But only if the login date is < than now + max_life_time
                             $sql = "SELECT course_access_id FROM $course_tracking_table
                             WHERE   user_id     = " . intval($_user ['user_id']) . " AND
-                                    course_code = '$course_code' AND
+                                    c_id = '$_real_cid' AND
                                     session_id  = " . api_get_session_id() . " AND
                                     login_course_date > now() - INTERVAL $session_lifetime SECOND
-                        ORDER BY login_course_date DESC LIMIT 0,1";
+                            ORDER BY login_course_date DESC LIMIT 0,1";
                             $result = Database::query($sql);
 
                             if (Database::num_rows($result) > 0) {
@@ -491,12 +489,10 @@ class Login
                                 //We update the course tracking table
                                 $sql = "UPDATE $course_tracking_table  SET logout_course_date = '$time', counter = counter+1
                                 WHERE course_access_id = " . intval($i_course_access_id) . " AND session_id = " . api_get_session_id();
-                                //error_log($sql);
                                 Database::query($sql);
                             } else {
-                                $sql = "INSERT INTO $course_tracking_table (course_code, user_id, login_course_date, logout_course_date, counter, session_id)" .
-                                    "VALUES('" . $course_code . "', '" . $_user['user_id'] . "', '$time', '$time', '1','" . api_get_session_id() . "')";
-                                //error_log($sql);
+                                $sql = "INSERT INTO $course_tracking_table (c_id, user_id, login_course_date, logout_course_date, counter, session_id)" .
+                                    "VALUES('" . $_real_cid . "', '" . $_user['user_id'] . "', '$time', '$time', '1','" . api_get_session_id() . "')";
                                 Database::query($sql);
                             }
                         }
@@ -523,8 +519,7 @@ class Login
                 //Check if user is subscribed in a course
                 $course_user_table = Database::get_main_table(TABLE_MAIN_COURSE_USER);
                 $sql = "SELECT * FROM $course_user_table
-                   WHERE user_id  = '" . $user_id . "' AND relation_type <> " . COURSE_RELATION_TYPE_RRHH . "
-                   AND course_code = '$course_id'";
+                        WHERE user_id  = '" . $user_id . "' AND relation_type <> " . COURSE_RELATION_TYPE_RRHH . " AND c_id = ".$_course['real_id'];
                 $result = Database::query($sql);
 
                 $cuData = null;
@@ -536,7 +531,7 @@ class Login
 
                     //Checking if the user filled the course legal agreement
                     if ($_course['activate_legal'] == 1 && !api_is_platform_admin()) {
-                        $user_is_subscribed = CourseManager::is_user_accepted_legal($user_id, $_course['id'], $session_id);
+                        $user_is_subscribed = CourseManager::is_user_accepted_legal($user_id, $_course, $session_id);
                         if (!$user_is_subscribed) {
                             $url = api_get_path(WEB_CODE_PATH) . 'course_info/legal.php?course_code=' . $_course['code'] . '&session_id=' . $session_id;
                             header('Location: ' . $url);
@@ -556,14 +551,13 @@ class Login
                         // The user is subscribed in a session? The user is a Session coach a Session admin ?
 
                         $tbl_session = Database :: get_main_table(TABLE_MAIN_SESSION);
-                        $tbl_session_course = Database :: get_main_table(TABLE_MAIN_SESSION_COURSE);
                         $tbl_session_course_user = Database :: get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
 
                         //Session coach, session admin, course coach admin
                         $sql = "SELECT session.id_coach, session_admin_id, session_rcru.id_user
                 		FROM $tbl_session session, $tbl_session_course_user session_rcru
 					    WHERE  session_rcru.id_session  = session.id AND
-					           session_rcru.course_code = '$_cid' AND
+					           session_rcru.c_id = ".$_course['real_id']." AND
 					           session_rcru.id_user     = '$user_id' AND
                                session_rcru.id_session  = $session_id AND
 					           session_rcru.status      = 2";
@@ -734,7 +728,7 @@ class Login
     static function init_group($group_id, $reset)
     {
         global $_cid;
-        global $_course;
+        $_course = api_get_course_info();
         global $_gid;
 
         if ($reset) { // session data refresh requested

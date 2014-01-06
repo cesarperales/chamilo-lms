@@ -10,39 +10,48 @@
 /**
  * Validates imported data.
  */
-function validate_data($courses)
-{
+function validate_data($courses) {
+    global $purification_option_for_usernames;
+
+    // Ensure the prefix + database name do not get over 40 characters.
+    $maxlength = 40;
+
     $errors = array ();
     $coursecodes = array ();
     foreach ($courses as $index => $course) {
         $course['line'] = $index +1;
-
         // 1. Check whether mandatory fields are set.
-        $mandatory_fields = array ('Code', 'Title', 'CourseCategory');
-        foreach ($mandatory_fields as $field) {
+        $mandatory_fields = array ('Code', 'Title', 'CourseCategory', 'Teacher');
+        foreach ($mandatory_fields as $key => $field) {
             if (!isset($course[$field]) || strlen($course[$field]) == 0) {
                 $course['error'] = get_lang($field.'Mandatory');
                 $errors[] = $course;
             }
         }
-
         // 2. Check current course code.
         if (isset ($course['Code']) && strlen($course['Code']) != 0) {
-            // 2.1 Check whether code has been already used by this CVS-file.
+            // 2.1 Check whether code has been allready used by this CVS-file.
             if (isset($coursecodes[$course['Code']])) {
                 $course['error'] = get_lang('CodeTwiceInFile');
                 $errors[] = $course;
-            } else {
-                // 2.2 Check whether course code has been occupied.
-                $courseInfo = api_get_course_info($course['Code']);
-                if (!empty($courseInfo)) {
+            }
+            // 2.2 Check course code length.
+            elseif (api_strlen($course['Code']) > $maxlength) {
+                $course['error'] = get_lang('Max');
+                $errors[] = $course;
+            }
+            // 2.3 Check whether course code has been occupied.
+            else {
+                $course_table = Database :: get_main_table(TABLE_MAIN_COURSE);
+                $sql = "SELECT * FROM $course_table WHERE code = '".Database::escape_string($course['Code'])."'";
+                $res = Database::query($sql);
+                if (Database::num_rows($res) > 0) {
                     $course['error'] = get_lang('CodeExists');
                     $errors[] = $course;
                 }
             }
             $coursecodes[$course['Code']] = 1;
         }
-
         // 3. Check whether teacher exists.
         $teacherList = getTeacherListInArray($course['Teacher']);
 
@@ -101,8 +110,9 @@ function save_data($courses)
                 $teacherInfo = api_get_user_info_from_username($teacher);
                 if (!empty($teacherInfo)) {
                     $teacherList[] = $teacherInfo;
-                }
             }
+        }
+
         }
 
         $params = array();
@@ -114,7 +124,6 @@ function save_data($courses)
         $params['user_id']          = $creatorId;
 
         $course_info = CourseManager::create_course($params);
-
         if (!empty($course_info)) {
             if (!empty($teacherList)) {
                 foreach ($teacherList as $teacher) {
@@ -136,9 +145,8 @@ function save_data($courses)
  * @param string $file Path to the CSV-file
  * @return array All course-information read from the file
  */
-function parse_csv_data($file)
-{
-    $courses = Import::csv_to_array($file);
+function parse_csv_data($file) {
+    $courses = Import :: csv_to_array($file);
     return $courses;
 }
 
@@ -146,16 +154,12 @@ $language_file = array('admin', 'registration','create_course', 'document');
 
 $cidReset = true;
 
-require '../inc/global.inc.php';
-
 $this_section = SECTION_PLATFORM_ADMIN;
 api_protect_admin_script();
 
-require_once api_get_path(LIBRARY_PATH).'fileManage.lib.php';
-require_once api_get_path(LIBRARY_PATH).'import.lib.php';
 $defined_auth_sources[] = PLATFORM_AUTH_SOURCE;
 
-if (is_array($extAuthSource)) {
+if (isset($extAuthSource) && is_array($extAuthSource)) {
     $defined_auth_sources = array_merge($defined_auth_sources, array_keys($extAuthSource));
 }
 
@@ -166,7 +170,7 @@ $interbreadcrumb[] = array('url' => 'index.php', 'name' => get_lang('PlatformAdm
 set_time_limit(0);
 Display :: display_header($tool_name);
 
-if ($_POST['formSent']) {
+if (isset($_POST['formSent']) && $_POST['formSent']) {
     if (empty($_FILES['import_file']['tmp_name'])) {
         $error_message = get_lang('UplUploadFailed');
         Display :: display_error_message($error_message, false);
@@ -187,7 +191,7 @@ if ($_POST['formSent']) {
     }
 }
 
-if (count($errors) != 0) {
+if (isset($errors) && count($errors) != 0) {
     $error_message = '<ul>';
     foreach ($errors as $index => $error_course) {
         $error_message .= '<li>'.get_lang('Line').' '.$error_course['line'].': <strong>'.$error_course['error'].'</strong>: ';
@@ -206,7 +210,7 @@ if (count($errors) != 0) {
         <input type="file" name="import_file"/>
     </div>
 </div>
-<div class="control-group">
+<div class="control-group ">
     <div class="control">
         <button type="submit" class="save" value="<?php echo get_lang('Import'); ?>"><?php echo get_lang('Import'); ?></button>
     </div>

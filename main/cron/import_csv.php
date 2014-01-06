@@ -524,9 +524,9 @@ class ImportCsv
                         $row['firstname'], // <<-- changed
                         $row['lastname'],  // <<-- changed
                         $row['username'],  // <<-- changed
-                        $password, //$password = null,
-                        PLATFORM_AUTH_SOURCE,
-                        $email,
+                        null, //$password = null,
+                        $auth_source = null,
+                        $userInfo['email'],
                         STUDENT,
                         $userInfo['official_code'],
                         $userInfo['phone'],

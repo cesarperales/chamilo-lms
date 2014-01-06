@@ -8,8 +8,6 @@
 /**
  * Code
  */
-define ('EVENT_EMAIL_TEMPLATE_ACTIVE',  1);
-define ('EVENT_EMAIL_TEMPLATE_INACTIVE',0);
 
 /**
  * @package chamilo.library
@@ -26,7 +24,6 @@ class EventEmailTemplate extends Model {
     public function get_all($where_conditions = array()) {
         return Database::select('*',$this->table, array('where'=>$where_conditions,'order' =>'name ASC'));
     }
-
 
     /**
      * Displays the title + grid
@@ -55,14 +52,8 @@ class EventEmailTemplate extends Model {
      * @param   string  action add, edit
      * @return  obj     form validator obj
      */
-    public function return_form($url, $action) {
-
-		$oFCKeditor = new FCKeditor('description') ;
-		$oFCKeditor->ToolbarSet = 'careers';
-		$oFCKeditor->Width		= '100%';
-		$oFCKeditor->Height		= '200';
-		$oFCKeditor->Value		= '';
-		$oFCKeditor->CreateHtml();
+    public function return_form($url, $action)
+    {
 
         $form = new FormValidator('career', 'post', $url);
         // Setting the form elements

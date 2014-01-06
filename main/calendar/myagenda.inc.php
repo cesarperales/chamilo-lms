@@ -1,23 +1,16 @@
 <?php
 /* For licensing terms, see /license.txt */
 /**
-    @author: Julio Montoya <gugli100@gmail.com> BeezNest 2011 Bugfixes
-
-    //Original code found in Dok€os
-	@author: Patrick Cool <patrick.cool@UGent.be>, Ghent University
+    @author: Patrick Cool <patrick.cool@UGent.be>, Ghent University
 	@author: Toon Van Hoecke <toon.vanhoecke@ugent.be>, Ghent University
 	@author: Eric Remy (initial version)
-
-	@todo create a class and merge with the agenda.inc.php
+    @deprecated use the Agenda class
 */
 
 /**
  * Settings (you may alter this at will
  */
 $setting_agenda_link = 'coursecode'; // valid values are coursecode and icon
-
-require_once api_get_path(LIBRARY_PATH).'groupmanager.lib.php';
-
 
 /**
  *	This function retrieves all the agenda items of all the courses the user is subscribed to
@@ -184,7 +177,7 @@ function display_mymonthcalendar($user_id, $agendaitems, $month, $year, $weekday
 
 				if (!empty($agendaitems[$curday])) {
 				   $items =  $agendaitems[$curday];
-				   $items =  msort($items, 'start_date_tms');
+				   $items =  ArrayClass::msort($items, 'start_date_tms');
 
 				   foreach($items  as $value) {
 				        $value['title'] = Security::remove_XSS($value['title']);
@@ -232,7 +225,7 @@ function display_mymonthcalendar($user_id, $agendaitems, $month, $year, $weekday
                             $link = $value['calendar_type'].'_'.$value['id'].'_'.$value['course_id'].'_'.$value['session_id'];
 
                             //Link to bubble
-                            $url = Display::url(cut($value['title'], 40), '#', array('id'=>$link, 'class'=>'opener'));
+                            $url = Display::url(Text::cut($value['title'], 40), '#', array('id'=>$link, 'class'=>'opener'));
                             $result .= $time.' '.$icon.' '.Display::div($url);
 
                             //Hidden content
@@ -321,193 +314,6 @@ function display_myminimonthcalendar($agendaitems, $month, $year, $monthName) {
 	echo "</table>";
 }
 
-/**
- * This function shows all the forms that are needed form adding /editing a new personal agenda item
- * when there is no $id passed in the function we are adding a new agenda item, if there is a $id
- * we are editing
- * attention: we have to check that the student is editing an item that belongs to him/her
- */
-function show_new_personal_item_form($id = "") {
-	global $year, $MonthsLong;
-
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
-
-	// we construct the default time and date data (used if we are not editing a personal agenda item)
-	//$today = getdate();
-
-	$current_date = api_strtotime(api_get_local_time());
-
-	$year = date('Y', $current_date);
-	$month = date('m', $current_date);
-	$day = date('d', $current_date);
-	$hours = date('H', $current_date);
-	$minutes = date('i', $current_date);
-
-	//echo date('Y', $current_date);
-	/*
-	$day = $today['mday'];
-	$month = $today['mon'];
-	$year = $today['year'];
-	$hours = $today['hours'];
-	$minutes = $today['minutes'];*/
-
-	$content=stripslashes($content);
-	$title=stripslashes($title);
-	// if an $id is passed to this function this means we are editing an item
-	// we are loading the information here (we do this after everything else
-	// to overwrite the default information)
-
-	if (strlen($id) > 0 && $id != strval(intval($id))) {
-		return false; //potential SQL injection
-	}
-
-	if ($id != "") {
-		$sql = "SELECT date, title, text FROM ".$tbl_personal_agenda." WHERE user='".api_get_user_id()."' AND id='".$id."'";
-		$result = Database::query($sql);
-		$aantal = Database::num_rows($result);
-		if ($aantal != 0) {
-			$row	= Database::fetch_array($result);
-			$row['date'] = api_get_local_time($row['date']);
-			$year 	= substr($row['date'], 0, 4);
-			$month 	= substr($row['date'], 5, 2);
-			$day 	= substr($row['date'], 8, 2);
-			$hours 	= substr($row['date'], 11, 2);
-			$minutes= substr($row['date'], 14, 2);
-
-			$title 	= $row['title'];
-			$content= $row['text'];
-		} else {
-			return false;
-		}
-	}
-
-	echo '<form method="post" action="myagenda.php?action=add_personal_agenda_item&id='.$id.'" name="newedit_form">';
-	echo '<div id="newedit_form">';
-	echo '<h2>';
-	echo ($_GET['action'] == 'edit_personal_agenda_item') ? get_lang("ModifyPersonalCalendarItem") : get_lang("AddPersonalCalendarItem");
-	echo '</h2>';
-	echo '<div>';
-
-	echo '<br/>';
-	echo ''.get_lang("Date").':	';
-
-	// ********** The form containing the days (0->31) ********** \\
-	echo '<select name="frm_day">';
-	// small loop for filling all the dates
-	// 2do: the available dates should be those of the selected month => february is from 1 to 28 (or 29) and not to 31
-	for ($i = 1; $i <= 31; $i ++) {
-		// values have to have double digits
-		if ($i <= 9){
-			$value = "0".$i;
-		} else {
-			$value = $i;
-		}
-		// the current day is indicated with [] around the date
-		if ($value == $day) {
-			echo '<option value='.$value.' selected>'.$i.'</option>';
-		} else {
-			echo '<option value='.$value.'>'.$i.'</option>';
-		}
-	}
-	echo '</select>';
-	// ********** The form containing the months (jan->dec) ********** \\
-	echo '<!-- month: january -> december -->';
-	echo '<select name="frm_month">';
-	for ($i = 1; $i <= 12; $i ++) {
-		// values have to have double digits
-		if ($i <= 9) {
-			$value = "0".$i;
-		} else {
-			$value = $i;
-		}
-		// the current month is indicated with [] around the month name
-		if ($value == $month) {
-			echo '<option value='.$value.' selected>'.$MonthsLong[$i -1].'</option>';
-		} else {
-			echo '<option value='.$value.'>'.$MonthsLong[$i -1].'</option>';
-		}
-	}
-	echo '</select>';
-	// ********** The form containing the years ********** \\
-	echo '<!-- year -->';
-	echo '<select name="frm_year">';
-	echo '<option value='. ($year -1).'>'. ($year -1).'</option>';
-	echo '<option value='.$year.' selected>'.$year.'</option>';
-	for ($i = 1; $i <= 5; $i ++)
-	{
-		$value = $year + $i;
-		echo '<option value='.$value.'>'.$value.'</option>';
-	}
-	echo '</select>&nbsp;&nbsp;';
-	echo "<a title=\"Kalender\" href=\"javascript:openCalendar('newedit_form', 'frm_')\">".Display::return_icon('calendar_select.gif', get_lang('Select'), array ('style' => 'vertical-align: middle;'))."</a>";
-	echo '&nbsp;&nbsp;';
-	// ********** The form containing the hours  (00->23) ********** \\
-	echo '<!-- time: hour -->';
-	echo get_lang("Time").': ';
-	echo '<select name="frm_hour">';
-	for ($i = 1; $i <= 24; $i ++) {
-		// values have to have double digits
-		if ($i <= 9) {
-			$value = "0".$i;
-		} else {
-			$value = $i;
-		}
-		// the current hour is indicated with [] around the hour
-		if ($hours == $value) {
-			echo '<option value='.$value.' selected>'.$value.'</option>';
-		} else {
-			echo '<option value='.$value.'> '.$value.' </option>';
-		}
-	}
-	echo '</select>';
-	// ********** The form containing the minutes ********** \\
-	echo "<select name=\"frm_minute\">";
-	echo "<option value=\"".$minutes."\">".$minutes."</option>";
-	echo "<option value=\"00\">00</option>";
-	echo "<option value=\"05\">05</option>";
-	echo "<option value=\"10\">10</option>";
-	echo "<option value=\"15\">15</option>";
-	echo "<option value=\"20\">20</option>";
-	echo "<option value=\"25\">25</option>";
-	echo "<option value=\"30\">30</option>";
-	echo "<option value=\"35\">35</option>";
-	echo "<option value=\"40\">40</option>";
-	echo "<option value=\"45\">45</option>";
-	echo "<option value=\"50\">50</option>";
-	echo "<option value=\"55\">55</option>";
-	echo '</select>';
-	echo '</div><br/>';
-	// ********** The title field ********** \\
-	echo '<div>';
-	echo ''.get_lang('Title').' : <input type="text" name="frm_title" size="50" value="'.$title.'" />';
-	echo '</div>';
-	// ********** The text field ********** \\
-	echo '<br /><div class="formw">';
-
-	require_once api_get_path(LIBRARY_PATH) . "/fckeditor/fckeditor.php";
-
-	$oFCKeditor = new FCKeditor('frm_content') ;
-
-	$oFCKeditor->Width		= '80%';
-	$oFCKeditor->Height		= '200';
-
-	if(!api_is_allowed_to_edit(null,true)) {
-		$oFCKeditor->ToolbarSet = 'AgendaStudent';
-	} else {
-		$oFCKeditor->ToolbarSet = 'Agenda';
-	}
-	$oFCKeditor->Value		= $content;
-	$return =	$oFCKeditor->CreateHtml();
-	echo $return;
-
-	echo '</div>';
-	// ********** The Submit button********** \\
-	echo '<div>';
-	echo '<br /><button type="submit" class="add" name="Submit" value="'.get_lang('AddEvent').'" >'.get_lang('AddEvent').'</button>';
-	echo '</div>';
-	echo '</div>';
-	echo '</form>';
-}
 
 /**
  * This function shows all the forms that are needed form adding/editing a new personal agenda item
@@ -522,7 +328,7 @@ function show_new_personal_item_form($id = "") {
  */
 function store_personal_item($day, $month, $year, $hour, $minute, $title, $content, $id = "") {
 
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
+	$tbl_personal_agenda = Database :: get_main_table(TABLE_PERSONAL_AGENDA);
 
 	//constructing the date
 	$date = $year."-".$month."-".$day." ".$hour.":".$minute.":00";
@@ -554,28 +360,26 @@ function store_personal_item($day, $month, $year, $hour, $minute, $title, $conte
  */
 
 function get_all_courses_of_user() {
-        $TABLECOURS = Database :: get_main_table(TABLE_MAIN_COURSE);
-        $TABLECOURSUSER = Database :: get_main_table(TABLE_MAIN_COURSE_USER);
-        $tbl_session_course     = Database :: get_main_table(TABLE_MAIN_SESSION_COURSE);
-        $tbl_session_course_user= Database :: get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
-        $tbl_session                    = Database :: get_main_table(TABLE_MAIN_SESSION);
-        $sql_select_courses = "SELECT c.code k, c.visual_code  vc, c.title i, c.tutor_name t,
-                                      c.db_name db, c.directory dir, '5' as status
-                                FROM $TABLECOURS c, $tbl_session_course_user srcu
-                                WHERE srcu.id_user='".api_get_user_id()."'
-                                AND c.code=srcu.course_code
-                                UNION
-                               SELECT c.code k, c.visual_code  vc, c.title i, c.tutor_name t,
-                                      c.db_name db, c.directory dir, cru.status status
-                                FROM $TABLECOURS c, $TABLECOURSUSER cru
-                                WHERE cru.user_id='".api_get_user_id()."'
-                                AND c.code=cru.course_code";
-        $result = Database::query($sql_select_courses);
-        while ($row = Database::fetch_array($result)) {
-            // we only need the database name of the course
-            $courses[] = array ("db" => $row['db'], "code" => $row['k'], "visual_code" => $row['vc'], "title" => $row['i'], "directory" => $row['dir'], "status" => $row['status']);
-        }
-        return $courses;
+    $TABLECOURS = Database :: get_main_table(TABLE_MAIN_COURSE);
+    $TABLECOURSUSER = Database :: get_main_table(TABLE_MAIN_COURSE_USER);
+    $tbl_session_course_user= Database :: get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
+    $sql_select_courses = "SELECT c.code k, c.visual_code  vc, c.title i, c.tutor_name t,
+                                  c.db_name db, c.directory dir, '5' as status
+                            FROM $TABLECOURS c, $tbl_session_course_user srcu
+                            WHERE srcu.id_user='".api_get_user_id()."'
+                            AND c.id = srcu.c_id
+                            UNION
+                           SELECT c.code k, c.visual_code  vc, c.title i, c.tutor_name t,
+                                  c.db_name db, c.directory dir, cru.status status
+                            FROM $TABLECOURS c, $TABLECOURSUSER cru
+                            WHERE cru.user_id='".api_get_user_id()."'
+                            AND c.id = cru.c_id";
+    $result = Database::query($sql_select_courses);
+    while ($row = Database::fetch_array($result)) {
+        // we only need the database name of the course
+        $courses[] = array ("db" => $row['db'], "code" => $row['k'], "visual_code" => $row['vc'], "title" => $row['i'], "directory" => $row['dir'], "status" => $row['status']);
+    }
+    return $courses;
  }
 
 
@@ -589,14 +393,13 @@ function get_courses_of_user() {
 	$TABLECOURS = Database :: get_main_table(TABLE_MAIN_COURSE);
 	$TABLECOURSUSER = Database :: get_main_table(TABLE_MAIN_COURSE_USER);
 	$sql_select_courses = "SELECT course.code k, course.visual_code  vc,
-									course.title i, course.tutor_name t, course.db_name db, course.directory dir, course_rel_user.status status
-			                        FROM    $TABLECOURS       course,
-											$TABLECOURSUSER   course_rel_user
-			                        WHERE course.code = course_rel_user.course_code
-			                        AND   course_rel_user.user_id = '".api_get_user_id()."'";
+                            course.title i, course.tutor_name t, course.db_name db, course.directory dir, course_rel_user.status status
+                            FROM    $TABLECOURS       course,
+                                    $TABLECOURSUSER   course_rel_user
+                            WHERE course.id = course_rel_user.c_id
+                            AND   course_rel_user.user_id = '".api_get_user_id()."'";
 	$result = Database::query($sql_select_courses);
-	while ($row = Database::fetch_array($result))
-	{
+	while ($row = Database::fetch_array($result)) {
 		// we only need the database name of the course
 		$courses[] = array ("db" => $row['db'], "code" => $row['k'], "visual_code" => $row['vc'], "title" => $row['i'], "directory" => $row['dir'], "status" => $row['status']);
 	}
@@ -606,7 +409,7 @@ function get_courses_of_user() {
  * This function retrieves all the personal agenda items and add them to the agenda items found by the other functions.
  */
 function get_personal_agenda_items($user_id, $agendaitems, $day = "", $month = "", $year = "", $week = "", $type) {
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
+	$tbl_personal_agenda = Database :: get_main_table(TABLE_PERSONAL_AGENDA);
 	$user_id = intval($user_id);
 
 	// 1. creating the SQL statement for getting the personal agenda items in MONTH view
@@ -708,7 +511,7 @@ function get_personal_agenda_items($user_id, $agendaitems, $day = "", $month = "
  * @return 	array	The results of the database query, or null if not found
  */
 function get_personal_agenda_item($id) {
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
+	$tbl_personal_agenda = Database :: get_main_table(TABLE_PERSONAL_AGENDA);
 	$id = Database::escape_string($id);
 	// make sure events of the personal agenda can only be seen by the user himself
 	$user = api_get_user_id();
@@ -728,7 +531,7 @@ function get_personal_agenda_item($id) {
 function show_personal_agenda() {
 	global $MonthsLong, $charset;
 
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
+	$tbl_personal_agenda = Database :: get_main_table(TABLE_PERSONAL_AGENDA);
 
 	// The SQL statement that retrieves all the personal agenda items of this user
 	$sql = "SELECT * FROM ".$tbl_personal_agenda." WHERE user='".api_get_user_id()."' ORDER BY date DESC";
@@ -832,7 +635,7 @@ function show_personal_agenda() {
 function show_simple_personal_agenda($user_id) {
 	global $MonthsLong, $charset;
 
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
+	$tbl_personal_agenda = Database :: get_main_table(TABLE_PERSONAL_AGENDA);
 
 	// The SQL statement that retrieves all the personal agenda items of this user
 	$sql = "SELECT * FROM ".$tbl_personal_agenda." WHERE user='".$user_id."' ORDER BY date DESC";
@@ -876,20 +679,10 @@ function show_simple_personal_agenda($user_id) {
 			$content.= date("d", strtotime($myrow["date"]))." ".$MonthsLong[date("n", strtotime($myrow["date"])) - 1]." ".date("Y", strtotime($myrow["date"]))."&nbsp;";
 			$content.= strftime(get_lang("timeNoSecFormat"), strtotime($myrow["date"]));
 
-			/*--------------------------------------------------
-			 			display: the title
-			  --------------------------------------------------*/
 			$content.= '<br />';
 			$content.= $myrow['title'];
 			$content.= '<br />';
 
-			/*--------------------------------------------------
-			 			display: the content
-			  --------------------------------------------------*/
-			  /*
-			$content = $myrow['title'];
-			$content = make_clickable($content);
-			*/
 			return $content;
 		}
 	} else {
@@ -903,7 +696,7 @@ function show_simple_personal_agenda($user_id) {
  * does not belong to him/her
  */
 function delete_personal_agenda($id) {
-	$tbl_personal_agenda = Database :: get_user_personal_table(TABLE_PERSONAL_AGENDA);
+	$tbl_personal_agenda = Database :: get_main_table(TABLE_PERSONAL_AGENDA);
 
 	if ($id != strval(intval($id))) {
 		return false; //potential SQL injection
@@ -940,7 +733,7 @@ function get_personal_agenda_items_between_dates($user_id, $date_start='', $date
 
 	// get agenda-items for every course
 	$courses = api_get_user_courses($user_id,false);
-    require_once(api_get_path(LIBRARY_PATH).'groupmanager.lib.php');
+
 	foreach ($courses as $id => $course)
 	{
 		$c = api_get_course_info($course['code']);

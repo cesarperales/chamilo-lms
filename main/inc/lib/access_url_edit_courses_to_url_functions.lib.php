@@ -1,13 +1,5 @@
 <?php
-/* For licensing terms, see /license.txt */
-/**
- * Definition of the Accessurleditcoursestourl class
- * @package chamilo.library
- */
-/**
- * Init
- */
-require_once ('xajax/xajax.inc.php');
+/* For licensing terms, see /chamilo_license.txt */
 /**
  * Access_url_edit_courses_to_url class
  * Contains several functions dealing with displaying,
@@ -17,7 +9,11 @@ require_once ('xajax/xajax.inc.php');
  * @author Toon Keppens <toon@vi-host.net>
  * @author Julio Montoya - Cleaning code
  * @author Ricardo Rodriguez - Separated the function and code
+ *
  */
+
+require_once ('xajax/xajax.inc.php');
+
 class Accessurleditcoursestourl
 {
     /**
@@ -28,7 +24,8 @@ class Accessurleditcoursestourl
      * @return string A formatted, xajax answer block
      * @assert () === false
      */
-    function search_courses($needle, $id)
+
+    public static function search_courses($needle, $id)
     {
         global $tbl_course;
         $xajax_response = new XajaxResponse();
@@ -47,18 +44,18 @@ class Accessurleditcoursestourl
                    ' ORDER BY title, code '.
                    ' LIMIT 11';
             $rs = Database::query($sql);
-            $i=0;
+            $i = 0;
             while ($course = Database :: fetch_array($rs)) {
                 $i++;
-                if ($i<=10) {
-                     $return .= '<a href="javascript: void(0);" onclick="javascript: add_user_to_url(\''.addslashes($course['code']).'\',\''.addslashes($course['title']).' ('.addslashes($course['code']).')'.'\')">'.$course['title'].' ('.$course['code'].')</a><br />';
+                if ($i <= 10) {
+				     $return .= '<a href="javascript: void(0);" onclick="javascript: add_user_to_url(\''.addslashes($course['code']).'\',\''.addslashes($course['title']).' ('.addslashes($course['code']).')'.'\')">'.$course['title'].' ('.$course['code'].')</a><br />';
                 } else {
                     $return .= '...<br />';
                 }
             }
         }
-        $xajax_response -> addAssign('ajax_list_courses','innerHTML',api_utf8_encode($return));
+        $xajax_response->addAssign('ajax_list_courses', 'innerHTML', api_utf8_encode($return));
+
         return $xajax_response;
     }
 }
-

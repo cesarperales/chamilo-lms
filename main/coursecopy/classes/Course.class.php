@@ -36,22 +36,22 @@ class Course
 	 */
     function is_linked_resource(& $resource_to_check)
     {
-        foreach ($this->resources as $type => $resources) {
-            if (is_array($resources)) {
-                foreach ($resources as $id => $resource) {
-                    if ($resource->links_to($resource_to_check) ) {
-                        return true;
-                    }
-                    if ($type == RESOURCE_LEARNPATH && get_class($resource)=='CourseCopyLearnpath') {
-                        if ($resource->has_item($resource_to_check)) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
+		foreach($this->resources as $type => $resources) {
+			if (is_array($resources)) {
+				foreach($resources as $id => $resource) {
+					if( $resource->links_to($resource_to_check) ) {
+						return true;
+					}
+					if ($type == RESOURCE_LEARNPATH && get_class($resource)=='CourseCopyLearnpath') {
+						if($resource->has_item($resource_to_check)) {
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
 
 	/**
 	 * Add a resource from a given type to this course
@@ -76,7 +76,6 @@ class Course
 		}
 		return (count($this->resources) > 0);
 	}
-
 	/**
 	 * Show this course resources
 	 */
@@ -188,13 +187,13 @@ class Course
                         case RESOURCE_WORK:
                             $title = $resource->title;
                             $description = $resource->description;
-                            break;
+							break;
 						default:
 							break;
 					}
 
-					$title = api_html_to_text($title);
-					$description = api_html_to_text($description);
+                    $title       = Text::api_html_to_text($title);
+                    $description = Text::api_html_to_text($description);
 
 					if (!empty($title)) {
 						$sample_text .= $title."\n";
@@ -214,7 +213,8 @@ class Course
 	/**
 	 * Converts to the system encoding all the language-sensitive fields in the imported course.
 	 */
-	public function to_system_encoding() {
+    public function to_system_encoding()
+    {
 
 		if (api_equal_encodings($this->encoding, api_get_system_encoding())) {
 			return;
@@ -332,6 +332,7 @@ class Course
 							$resource->content = api_to_system_encoding($resource->content, $this->encoding);
 							$resource->reflink = api_to_system_encoding($resource->reflink, $this->encoding);
 							break;
+
                         case RESOURCE_WORK:
                             $resource->url = api_to_system_encoding($resource->url, $this->encoding);
                             $resource->title = api_to_system_encoding($resource->title, $this->encoding);

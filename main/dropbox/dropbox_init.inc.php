@@ -128,6 +128,7 @@ require_once '../inc/global.inc.php';
 $is_allowed_in_course = api_is_allowed_in_course();
 $is_courseTutor = api_is_course_tutor();
 $is_courseAdmin = api_is_course_admin();
+
 $current_course_tool  = TOOL_DROPBOX;
 
 // the dropbox configuration parameters
@@ -137,8 +138,8 @@ Session::write('dropbox_conf', $dropbox_cnf);
 // the dropbox file that contains additional functions
 require_once 'dropbox_functions.inc.php';
 
-require_once api_get_path(LIBRARY_PATH).'mail.lib.inc.php';
-require_once api_get_path(LIBRARY_PATH).'fileUpload.lib.php';
+//require_once api_get_path(LIBRARY_PATH).'mail.lib.inc.php';
+//require_once api_get_path(LIBRARY_PATH).'fileUpload.lib.php';
 
 // protecting the script
 api_protect_course_script();
@@ -150,7 +151,7 @@ require_once 'dropbox_class.inc.php';
 
 // including some libraries that are also used in the documents tool
 require_once api_get_path(SYS_CODE_PATH).'document/document.inc.php';  // we use a function build_document_icon_tag
-require_once api_get_path(LIBRARY_PATH).'fileDisplay.lib.php'; // the function choose_image is used
+//require_once api_get_path(LIBRARY_PATH).'fileDisplay.lib.php'; // the function choose_image is used
 require_once api_get_path(LIBRARY_PATH).'document.lib.php';
 
 /*	Virtual course support */
@@ -165,9 +166,9 @@ $view = isset($_GET['view']) ? Security::remove_XSS($_GET['view']) : null;
 $postAction = isset($_POST['action']) ? $_POST['action'] : null;
 
 if (empty($session_id)) {
-    $is_course_member = CourseManager::is_user_subscribed_in_course($user_id, $course_code, false);
+    $is_course_member = CourseManager::is_user_subscribed_in_course($user_id, $course_info['real_id'], false);
 } else {
-    $is_course_member = CourseManager::is_user_subscribed_in_course($user_id, $course_code, true, $session_id);
+    $is_course_member = CourseManager::is_user_subscribed_in_course($user_id, $course_info['real_id'], true, $session_id);
 }
 
 /*	Object Initialisation */

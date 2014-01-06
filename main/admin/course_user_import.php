@@ -8,137 +8,106 @@
 /**
  * Validates the imported data.
  */
-function validate_data($users_courses)
-{
-    $errors      = array();
-    $coursecodes = array();
-    foreach ($users_courses as $index => $user_course) {
-        $user_course['line'] = $index + 1;
-        // 1. Check whether mandatory fields are set.
-        $mandatory_fields = array('UserName', 'CourseCode', 'Status');
-        foreach ($mandatory_fields as $key => $field) {
-            if (!isset($user_course[$field]) || strlen($user_course[$field]) == 0) {
-                $user_course['error'] = get_lang($field.'Mandatory');
-                $errors[]             = $user_course;
-            }
-        }
-
-        // 2. Check whether coursecode exists.
-        if (isset ($user_course['CourseCode']) && strlen($user_course['CourseCode']) != 0) {
-            // 2.1 Check whethher code has been allready used by this CVS-file.
-            if (!isset($coursecodes[$user_course['CourseCode']])) {
-                // 2.1.1 Check whether course with this code exists in the system.
-                $course_table = Database :: get_main_table(TABLE_MAIN_COURSE);
-                $sql          = "SELECT * FROM $course_table WHERE code = '".Database::escape_string($user_course['CourseCode'])."'";
-                $res          = Database::query($sql);
-                if (Database::num_rows($res) == 0) {
-                    $user_course['error'] = get_lang('CodeDoesNotExists');
-                    $errors[]             = $user_course;
-                } else {
-                    $coursecodes[$user_course['CourseCode']] = 1;
-                }
-            }
-        }
-
-        // 3. Check whether username exists.
-        if (isset ($user_course['UserName']) && strlen($user_course['UserName']) != 0) {
-            if (UserManager::is_username_available($user_course['UserName'])) {
-                $user_course['error'] = get_lang('UnknownUser');
-                $errors[]             = $user_course;
-            }
-        }
-
-        // 4. Check whether status is valid.
-        if (isset ($user_course['Status']) && strlen($user_course['Status']) != 0) {
-            if ($user_course['Status'] != COURSEMANAGER && $user_course['Status'] != STUDENT) {
-                $user_course['error'] = get_lang('UnknownStatus');
-                $errors[]             = $user_course;
-            }
-        }
-    }
-    return $errors;
+function validate_data($users_courses) {
+	$errors = array ();
+	$coursecodes = array ();
+	foreach ($users_courses as $index => $user_course) {
+		$user_course['line'] = $index +1;
+		// 1. Check whether mandatory fields are set.
+		$mandatory_fields = array ('UserName', 'CourseCode', 'Status');
+		foreach ($mandatory_fields as $field) {
+			if (!isset($user_course[$field]) || strlen($user_course[$field]) == 0) {
+				$user_course['error'] = get_lang($field.'Mandatory');
+				$errors[] = $user_course;
+			}
+		}
+		// 2. Check whether coursecode exists.
+		if (isset ($user_course['CourseCode']) && strlen($user_course['CourseCode']) != 0) {
+			// 2.1 Check whethher code has been allready used by this CVS-file.
+			if (!isset($coursecodes[$user_course['CourseCode']])) {
+				// 2.1.1 Check whether course with this code exists in the system.
+                $courseInfo = api_get_course_info($user_course['CourseCode']);
+				if (empty($courseInfo)) {
+					$user_course['error'] = get_lang('CodeDoesNotExists');
+					$errors[] = $user_course;
+				} else {
+					$coursecodes[$user_course['CourseCode']] = 1;
+				}
+			}
+		}
+		// 3. Check whether username exists.
+		if (isset ($user_course['UserName']) && strlen($user_course['UserName']) != 0) {
+			if (UserManager::is_username_available($user_course['UserName'])) {
+				$user_course['error'] = get_lang('UnknownUser');
+				$errors[] = $user_course;
+			}
+		}
+		// 4. Check whether status is valid.
+		if (isset ($user_course['Status']) && strlen($user_course['Status']) != 0) {
+			if ($user_course['Status'] != COURSEMANAGER && $user_course['Status'] != STUDENT) {
+				$user_course['error'] = get_lang('UnknownStatus');
+				$errors[] = $user_course;
+			}
+		}
+	}
+	return $errors;
 }
 
 /**
  * Saves imported data.
  */
-function save_data($users_courses)
-{
-    $user_table        = Database::get_main_table(TABLE_MAIN_USER);
-    $course_user_table = Database::get_main_table(TABLE_MAIN_COURSE_USER);
-    $csv_data          = array();
-    foreach ($users_courses as $index => $user_course) {
-        $csv_data[$user_course['UserName']][$user_course['CourseCode']] = $user_course['Status'];
-    }
-    foreach ($csv_data as $username => $csv_subscriptions) {
-        $user_id          = 0;
-        $sql              = "SELECT * FROM $user_table u WHERE u.username = '".Database::escape_string($username)."'";
-        $res              = Database::query($sql);
-        $obj              = Database::fetch_object($res);
-        $user_id          = $obj->user_id;
-        $sql              = "SELECT * FROM $course_user_table cu WHERE cu.user_id = $user_id AND cu.relation_type<>".COURSE_RELATION_TYPE_RRHH." ";
-        $res              = Database::query($sql);
-        $db_subscriptions = array();
-        while ($obj = Database::fetch_object($res)) {
-            $db_subscriptions[$obj->course_code] = $obj->status;
-        }
+function save_data($users_courses) {
+	$user_table = Database::get_main_table(TABLE_MAIN_USER);
+	$course_user_table = Database::get_main_table(TABLE_MAIN_COURSE_USER);
+	$csv_data = array();
+	foreach ($users_courses as $user_course) {
+		$csv_data[$user_course['UserName']][$user_course['CourseCode']] = $user_course['Status'];
+	}
 
-        $to_subscribe   = array_diff(array_keys($csv_subscriptions), array_keys($db_subscriptions));
-        $to_unsubscribe = array_diff(array_keys($db_subscriptions), array_keys($csv_subscriptions));
+	foreach ($csv_data as $username => $csv_subscriptions) {
+		$sql = "SELECT * FROM $user_table u WHERE u.username = '".Database::escape_string($username)."'";
+		$res = Database::query($sql);
+		$obj = Database::fetch_object($res);
+		$user_id = $obj->user_id;
+		$sql = "SELECT * FROM $course_user_table cu
+		        WHERE cu.user_id = $user_id AND cu.relation_type<>".COURSE_RELATION_TYPE_RRHH." ";
+		$res = Database::query($sql);
+		$db_subscriptions = array();
+		while ($obj = Database::fetch_object($res)) {
+			$db_subscriptions[$obj->c_id] = $obj->status;
+		}
+
+
+        $csvCourseList = array();
+        foreach ($csv_subscriptions as $courseCode => $status) {
+            $courseInfo = api_get_course_info($courseCode);
+            if ($courseInfo) {
+                $csvCourseList[$courseInfo['real_id']] = $status;
+            }
+        }
+		$to_subscribe = array_diff(array_keys($csvCourseList), array_keys($db_subscriptions));
+		$to_unsubscribe = array_diff(array_keys($db_subscriptions), array_keys($csvCourseList));
 
         global $inserted_in_course;
         if (!isset($inserted_in_course)) {
             $inserted_in_course = array();
         }
+		if (isset($_POST['subscribe']) && $_POST['subscribe']) {
+			foreach ($to_subscribe as $courseId) {
+                CourseManager::add_user_to_course($user_id, $courseId, $csvCourseList[$courseId]);
+                $course_info = api_get_course_info_by_id($courseId);
+                $inserted_in_course[$courseId] = $course_info['title'];
+			}
+		}
 
-        if ($_POST['subscribe']) {
-            foreach ($to_subscribe as $index => $course_code) {
-                if (CourseManager :: course_exists($course_code)) {
-                    CourseManager::add_user_to_course($user_id, $course_code, $csv_subscriptions[$course_code]);
-                    $course_info                      = CourseManager::get_course_information($course_code);
-                    $inserted_in_course[$course_code] = $course_info['title'];
-                }
-                if (CourseManager :: course_exists($course_code, true)) {
-                    // Also subscribe to virtual courses through check on visual code.
-                    $list = CourseManager :: get_courses_info_from_visual_code($course_code);
-                    foreach ($list as $vcourse) {
-                        if ($vcourse['code'] == $course_code) {
-                            // Ignore, this has already been inserted.
-                        } else {
-                            CourseManager::add_user_to_course(
-                                $user_id,
-                                $vcourse['code'],
-                                $csv_subscriptions[$course_code]
-                            );
-                            $inserted_in_course[$vcourse['code']] = $vcourse['title'];
-                        }
-                    }
-                }
-            }
-        }
-
-        if ($_POST['unsubscribe']) {
-            foreach ($to_unsubscribe as $index => $course_code) {
-                if (CourseManager :: course_exists($course_code)) {
-                    CourseManager::unsubscribe_user($user_id, $course_code);
-                    $course_info                      = CourseManager::get_course_information($course_code);
-                    $inserted_in_course[$course_code] = $course_info['title'];
-                }
-                if (CourseManager :: course_exists($course_code, true)) {
-                    // also subscribe to virtual courses through check on visual code
-                    $list = CourseManager :: get_courses_info_from_visual_code($course_code);
-                    foreach ($list as $vcourse) {
-                        if ($vcourse['code'] == $course_code) {
-                            // Ignore, this has already been inserted.
-                        } else {
-                            CourseManager::unsubscribe_user($user_id, $vcourse['code']);
-                            $inserted_in_course[$vcourse['code']] = $vcourse['title'];
-                        }
-                    }
-                }
-            }
-        }
-    }
+		if (isset($_POST['unsubscribe']) && $_POST['unsubscribe']) {
+			foreach ($to_unsubscribe as $courseId) {
+                CourseManager::unsubscribe_user($user_id, $courseId);
+                $course_info = api_get_course_info_by_id($courseId);
+                $inserted_in_course[$courseId] = $course_info['title'];
+			}
+		}
+	}
 }
 
 /**
@@ -164,13 +133,8 @@ $this_section = SECTION_PLATFORM_ADMIN;
 // Protecting the admin section.
 api_protect_admin_script();
 
-// Including additional libraries.
-require_once api_get_path(LIBRARY_PATH).'fileManage.lib.php';
-require_once api_get_path(LIBRARY_PATH).'import.lib.php';
-
 $tool_name = get_lang('AddUsersToACourse').' CSV';
-
-$interbreadcrumb[] = array('url' => 'index.php', 'name' => get_lang('PlatformAdmin'));
+$interbreadcrumb[] = array ('url' => 'index.php', 'name' => get_lang('PlatformAdmin'));
 
 set_time_limit(0);
 
@@ -213,15 +177,18 @@ if ($form->validate()) {
 // Displaying the header.
 Display :: display_header($tool_name);
 
-if (count($errors) != 0) {
-    $error_message = '<ul>';
-    foreach ($errors as $index => $error_course) {
-        $error_message .= '<li>'.get_lang('Line').' '.$error_course['line'].': <strong>'.$error_course['error'].'</strong>: ';
-        $error_message .= $error_course['Code'].' '.$error_course['Title'];
-        $error_message .= '</li>';
-    }
-    $error_message .= '</ul>';
-    Display :: display_error_message($error_message);
+// Displaying the tool title.
+// api_display_tool_title($tool_name);
+
+if (isset($errors) && count($errors) != 0) {
+	$error_message = '<ul>';
+	foreach ($errors as $index => $error_course) {
+		$error_message .= '<li>'.get_lang('Line').' '.$error_course['line'].': <strong>'.$error_course['error'].'</strong>: ';
+		$error_message .= $error_course['Code'].' '.$error_course['Title'];
+		$error_message .= '</li>';
+	}
+	$error_message .= '</ul>';
+	Display :: display_error_message($error_message);
 }
 
 // Displaying the form.

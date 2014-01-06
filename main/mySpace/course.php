@@ -14,8 +14,6 @@ $language_file = array ('admin', 'registration', 'index', 'tracking');
 $cidReset = true;
 
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'export.lib.inc.php';
-require_once api_get_path(LIBRARY_PATH).'thematic.lib.php';
 
 $this_section = SECTION_TRACKING;
 $id_session = intval($_GET['id_session']);
@@ -89,19 +87,13 @@ if (api_is_drh() || api_is_session_admin() || api_is_platform_admin()) {
 
 	$a_courses = array_keys($courses);
 
-    if (!api_is_session_admin()) {
-        $menu_items[] = Display::url(Display::return_icon('stats.png', get_lang('MyStats'),'',ICON_SIZE_MEDIUM),api_get_path(WEB_CODE_PATH)."auth/my_progress.php" );
-        $menu_items[] = Display::url(Display::return_icon('user.png', get_lang('Students'), array(), ICON_SIZE_MEDIUM), "index.php?view=drh_students&amp;display=yourstudents");
-        $menu_items[] = Display::url(Display::return_icon('teacher.png', get_lang('Trainers'), array(), ICON_SIZE_MEDIUM), 'teachers.php');
-        $menu_items[] = Display::url(Display::return_icon('course_na.png', get_lang('Courses'), array(), ICON_SIZE_MEDIUM), '#');
-        $menu_items[] = Display::url(Display::return_icon('session.png', get_lang('Sessions'), array(), ICON_SIZE_MEDIUM), 'session.php');
-
-        if (api_can_login_as($user_id)) {
-            $link = '<a href="'.api_get_path(WEB_CODE_PATH).'admin/user_list.php?action=login_as&amp;user_id='.$user_id.'&amp;sec_token='.Security::get_existing_token().'">'.
-                    Display::return_icon('login_as.png', get_lang('LoginAs'), null, ICON_SIZE_MEDIUM).'</a>&nbsp;&nbsp;';
-            $menu_items[] = $link;
-        }
-    }
+	if (!api_is_session_admin()) {
+		$menu_items[] = Display::url(Display::return_icon('stats.png', get_lang('MyStats'),'',ICON_SIZE_MEDIUM),api_get_path(WEB_CODE_PATH)."auth/my_progress.php" );
+		$menu_items[] = Display::url(Display::return_icon('user.png', get_lang('Students'), array(), 32), "index.php?view=drh_students&amp;display=yourstudents");
+		$menu_items[] = Display::url(Display::return_icon('teacher.png', get_lang('Trainers'), array(), 32), 'teachers.php');
+		$menu_items[] = Display::return_icon('course_na.png', get_lang('Courses'), array(), 32);
+		$menu_items[] = Display::url(Display::return_icon('session.png', get_lang('Sessions'), array(), 32), 'session.php');
+	}
 
 	echo '<div class="actions">';
 	$nb_menu_items = count($menu_items);
@@ -180,16 +172,20 @@ $csv_header[] = array(
 );
 
 if (is_array($a_courses)) {
-	foreach ($a_courses as $course_code) {
+	foreach ($a_courses as $courseId) {
+        $courseId = intval($courseId);
 		$nb_students_in_course = 0;
-		$course = CourseManager :: get_course_information($course_code);
+		$course = api_get_course_info_by_id($courseId);
+        $course_code = $course['code'];
 		$avg_assignments_in_course = $avg_messages_in_course = $avg_progress_in_course = $avg_score_in_course = $avg_time_spent_in_course = 0;
 
 		// students directly subscribed to the course
 		if (empty($id_session)) {
-			$sql = "SELECT user_id FROM $tbl_user_course as course_rel_user WHERE course_rel_user.status='5' AND course_rel_user.course_code='$course_code'";
+			$sql = "SELECT user_id FROM $tbl_user_course as course_rel_user
+			        WHERE course_rel_user.status='5' AND course_rel_user.c_id =".$courseId;
 		} else {
-			$sql = "SELECT id_user as user_id FROM $tbl_session_course_user srcu WHERE  srcu. course_code='$course_code' AND id_session = '$id_session' AND srcu.status<>2";
+			$sql = "SELECT id_user as user_id FROM $tbl_session_course_user srcu
+			        WHERE  srcu.c_id='$courseId' AND id_session = '$id_session' AND srcu.status<>2";
 		}
 
 		$rs = Database::query($sql);
@@ -200,12 +196,13 @@ if (is_array($a_courses)) {
 
 		if (count($users) > 0) {
 			$nb_students_in_course = count($users);
-			// tracking data
-			$avg_progress_in_course = Tracking :: get_avg_student_progress ($users, $course_code, array(), $id_session);
-			$avg_score_in_course = Tracking :: get_avg_student_score ($users, $course_code, array(), $id_session);
-			$avg_time_spent_in_course = Tracking :: get_time_spent_on_the_course ($users, $course_code, $id_session);
-			$messages_in_course = Tracking :: count_student_messages ($users, $course_code, $id_session);
-			$assignments_in_course = Tracking :: count_student_assignments ($users, $course_code, $id_session);
+			// tracking datas
+			$avg_progress_in_course = Tracking :: get_avg_student_progress ($users, $courseId, array(), $id_session);
+			$avg_score_in_course = Tracking :: get_avg_student_score ($users, $courseId, array(), $id_session);
+			$avg_time_spent_in_course = Tracking :: get_time_spent_on_the_course ($users, $courseId, $id_session);
+			$messages_in_course = Tracking :: count_student_messages ($users, $courseId, $id_session);
+			$assignments_in_course = Tracking :: count_student_assignments ($users, $courseId, $id_session);
+
 			$avg_time_spent_in_course = api_time_to_hms($avg_time_spent_in_course / $nb_students_in_course);
 			$avg_progress_in_course = round($avg_progress_in_course / $nb_students_in_course, 2);
 
@@ -222,7 +219,7 @@ if (is_array($a_courses)) {
 		}
 
 		$tematic_advance_progress = 0;
-		$thematic = new Thematic();
+		$thematic = new Thematic($course);
 		$tematic_advance = $thematic->get_total_average_of_thematic_advances($course_code, $id_session);
 
 		if (!empty($tematic_advance)) {

@@ -194,7 +194,7 @@ if ($form->validate()) {
                 }
 
                 if ($_POST['qualification'] > $_POST['qualification_over']) {
-                    $error_message .= Display::return_message(get_lang('QualificationMustNotBeMoreThanQualificationOver'), 'error');
+                    Display::display_error_message(get_lang('QualificationMustNotBeMoreThanQualificationOver'));
                 } else {
                     $sql = "UPDATE  " . $work_table . "
                             SET	title = '".Database::escape_string($title)."',
@@ -227,7 +227,7 @@ if ($form->validate()) {
     if ($is_allowed_to_edit) {
         $script = 'work_list_all.php';
     }
-    header('Location: '.api_get_path(WEB_CODE_PATH).'work/'.$script.'?'.api_get_cidreq().'&id='.$work_id);
+    header('Location: '.api_get_path(WEB_CODE_PATH).'work/'.$script.'?'.api_get_cidreq().'&id='.$work_id.'&error_message='.$error_message);
     exit;
 }
 

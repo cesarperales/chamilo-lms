@@ -10,7 +10,6 @@ $language_file = array('admin');
 
 $cidReset = true;
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'career.lib.php';
 
 $this_section = SECTION_PLATFORM_ADMIN;
 
@@ -38,8 +37,7 @@ if ($action == 'add') {
     $interbreadcrumb[]=array('url' => '#','name' => get_lang('Careers'));
 }
 
-// The header.
-Display::display_header($tool_name);
+Display::display_header();
 
 //jqgrid will use this URL to do the selects
 $url = api_get_path(WEB_AJAX_PATH).'model.ajax.php?a=get_careers';
@@ -50,21 +48,53 @@ $columns = array(get_lang('Name'), get_lang('Description'), get_lang('Actions'))
 // Column config
 $column_model   = array(
     array('name'=>'name',           'index'=>'name',        'width'=>'80',   'align'=>'left'),
-    array('name'=>'description',    'index'=>'description', 'width'=>'500',  'align'=>'left','sortable'=>'false'),
-    array('name'=>'actions',        'index'=>'actions',     'width'=>'100',  'align'=>'left','formatter'=>'action_formatter','sortable'=>'false')
-);
-//Autowidth
+    array(
+        'name'     => 'description',
+        'index'    => 'description',
+        'width'    => '500',
+        'align'    => 'left',
+        'sortable' => 'false'
+    ),
+    array(
+        'name'      => 'actions',
+        'index'     => 'actions',
+        'width'     => '100',
+        'align'     => 'left',
+        'formatter' => 'action_formatter',
+        'sortable'  => 'false'
+    )
+                       );            
+//Autowidth             
 $extra_params['autowidth'] = 'true';
 //height auto
 $extra_params['height'] = 'auto';
 
 //With this function we can add actions to the jgrid (edit, delete, etc)
 $action_links = 'function action_formatter(cellvalue, options, rowObject) {
-    return \'<a href="?action=edit&id=\'+options.rowId+\'">'.Display::return_icon('edit.png',get_lang('Edit'),'',ICON_SIZE_SMALL).'</a>'.
-    '&nbsp;<a onclick="javascript:if(!confirm('."\'".addslashes(api_htmlentities(get_lang("ConfirmYourChoice"),ENT_QUOTES))."\'".')) return false;"  href="?sec_token='.$token.'&action=copy&id=\'+options.rowId+\'">'.Display::return_icon('copy.png',get_lang('Copy'),'',ICON_SIZE_SMALL).'</a>'.
-    '&nbsp;<a onclick="javascript:if(!confirm('."\'".addslashes(api_htmlentities(get_lang("ConfirmYourChoice"),ENT_QUOTES))."\'".')) return false;"  href="?sec_token='.$token.'&action=delete&id=\'+options.rowId+\'">'.Display::return_icon('delete.png',get_lang('Delete'),'',ICON_SIZE_SMALL).'</a>'.
-    '\';
-}';
+                         return \'<a href="?action=edit&id=\'+options.rowId+\'">'.Display::return_icon(
+    'edit.png',
+    get_lang('Edit'),
+    '',
+    ICON_SIZE_SMALL
+).'</a>'.
+    '&nbsp;<a onclick="javascript:if(!confirm('."\'".addslashes(
+    api_htmlentities(get_lang("ConfirmYourChoice"), ENT_QUOTES)
+)."\'".')) return false;"  href="?sec_token='.$token.'&action=copy&id=\'+options.rowId+\'">'.Display::return_icon(
+    'copy.png',
+    get_lang('Copy'),
+    '',
+    ICON_SIZE_SMALL
+).'</a>'.
+    '&nbsp;<a onclick="javascript:if(!confirm('."\'".addslashes(
+    api_htmlentities(get_lang("ConfirmYourChoice"), ENT_QUOTES)
+)."\'".')) return false;"  href="?sec_token='.$token.'&action=delete&id=\'+options.rowId+\'">'.Display::return_icon(
+    'delete.png',
+    get_lang('Delete'),
+    '',
+    ICON_SIZE_SMALL
+).'</a>'.
+                         '\'; 
+                 }';
 ?>
 <script>
 $(function() {
@@ -100,8 +130,13 @@ switch ($action) {
             $career->display();
         } else {
             echo '<div class="actions">';
-            echo '<a href="'.api_get_self().'">'.Display::return_icon('back.png',get_lang('Back'),'',ICON_SIZE_MEDIUM).'</a>';
-            echo '</div>';
+            echo '<a href="'.api_get_self().'">'.Display::return_icon(
+                'back.png',
+                get_lang('Back'),
+                '',
+                ICON_SIZE_MEDIUM
+            ).'</a>';
+            echo '</div>';            
             $form->addElement('hidden', 'sec_token');
             $form->setConstants(array('sec_token' => $token));
             $form->display();
@@ -116,22 +151,26 @@ switch ($action) {
         if ($form->validate()) {
             if ($check) {
                 $values = $form->exportValues();
-                $career->update_all_promotion_status_by_career_id($values['id'], $values['status']);
-                $old_status = $career->get_status($values['id']);
+                $career->update_all_promotion_status_by_career_id($values['id'],$values['status']);               
                 $res    = $career->update($values);
-                if ($res) {
-                    Display::display_confirmation_message(get_lang('CareerUpdated'));
-                    if ($values['status'] && !$old_status) {
-                        Display::display_confirmation_message(sprintf(get_lang('CareerXUnarchived'), $values['name']), false);
-                    } elseif (!$values['status'] && $old_status) {
-                        Display::display_confirmation_message(sprintf(get_lang('CareerXArchived'), $values['name']), false);
-                    }
+                if ($values['status']) {
+                    Display::display_confirmation_message(
+                        sprintf(get_lang('CareerXUnarchived'), $values['name']),
+                        false
+                    );
+                } else {
+                    Display::display_confirmation_message(sprintf(get_lang('CareerXArchived'), $values['name']), false);
                 }
             }
             $career->display();
         } else {
             echo '<div class="actions">';
-            echo '<a href="'.api_get_self().'">'.Display::return_icon('back.png', get_lang('Back'), '', ICON_SIZE_MEDIUM).'</a>';
+            echo '<a href="'.api_get_self().'">'.Display::return_icon(
+                'back.png',
+                get_lang('Back'),
+                '',
+                ICON_SIZE_MEDIUM
+            ).'</a>';
             echo '</div>';
             $form->addElement('hidden', 'sec_token');
             $form->setConstants(array('sec_token' => $token));

@@ -13,7 +13,6 @@
  */
 require_once 'learnpath.class.php';
 require_once 'resourcelinker.inc.php';
-require_once '../exercice/exercise.lib.php';
 
 $course_code = api_get_course_id();
 
@@ -111,8 +110,8 @@ $TBL_LP_ITEM_VIEW = Database :: get_course_table(TABLE_LP_ITEM_VIEW);
 $TBL_LP_VIEW = Database :: get_course_table(TABLE_LP_VIEW);
 $tbl_quiz_questions = Database :: get_course_table(TABLE_QUIZ_QUESTION);
 $TBL_QUIZ = Database :: get_course_table(TABLE_QUIZ_TEST);
-$tbl_stats_exercices = Database :: get_statistic_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
-$tbl_stats_attempts = Database :: get_statistic_table(TABLE_STATISTIC_TRACK_E_ATTEMPT);
+$tbl_stats_exercices = Database :: get_main_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
+$tbl_stats_attempts = Database :: get_main_table(TABLE_STATISTIC_TRACK_E_ATTEMPT);
 
 $sql = "SELECT max(view_count) FROM $TBL_LP_VIEW WHERE c_id = $course_id AND lp_id = $lp_id AND user_id = '" . $user_id . "' $session_condition";
 $res = Database::query($sql);
@@ -154,7 +153,7 @@ if (isset($_GET['lp_id']) && isset($_GET['lp_item_id'])) {
                                     exe_user_id="' . api_get_user_id() . '" AND
                                     orig_lp_id = "' . (int) $clean_lp_id . '" AND
                                     orig_lp_item_id = "' . (int) $clean_lp_item_id . '" AND
-                                    exe_cours_id="' . $clean_course_code . '"  AND
+                                    c_id="' . $course_id . '"  AND
                                     session_id = ' . $session_id . '
                              ORDER BY exe_date';
         } else {
@@ -164,7 +163,7 @@ if (isset($_GET['lp_id']) && isset($_GET['lp_item_id'])) {
                                     exe_user_id="' . $student_id . '" AND
                                     orig_lp_id = "' . (int) $clean_lp_id . '" AND
                                     orig_lp_item_id = "' . (int) $clean_lp_item_id . '" AND
-                                    exe_cours_id="' . $clean_course_code . '"  AND
+                                    c_id = "' . $course_id . '"  AND
                                     session_id = ' . $session_id . '
                              ORDER BY exe_date';
         }
@@ -246,7 +245,7 @@ if (is_array($list) && count($list) > 0) {
                 // Check results_disabled in quiz table.
                 $my_path = Database::escape_string($row['path']);
 
-                $sql = "SELECT results_disabled FROM $TBL_QUIZ WHERE c_id = $course_id AND id ='" . $my_path . "'";
+                $sql = "SELECT results_disabled FROM $TBL_QUIZ WHERE c_id = $course_id AND iid ='" . $my_path . "'";
                 $res_result_disabled = Database::query($sql);
                 $row_result_disabled = Database::fetch_row($res_result_disabled);
 
@@ -346,14 +345,14 @@ if (is_array($list) && count($list) > 0) {
                                 if ($maxscore == 0) {
                                     $view_score = $score;
                                 } else {
-                                    $view_score = show_score($score, $maxscore, false);
+                                    $view_score = ExerciseLib::show_score($score, $maxscore, false);
                                 }
                                 break;
                             case 'document':
-                                $view_score = ($score == 0 ? '/' : show_score($score, $maxscore, false));
+                                $view_score = ($score == 0 ? '/' : ExerciseLib::show_score($score, $maxscore, false));
                                 break;
                             default:
-                                $view_score = show_score($score, $maxscore, false);
+                                $view_score = ExerciseLib::show_score($score, $maxscore, false);
                                 break;
                         }
                     }
@@ -376,10 +375,10 @@ if (is_array($list) && count($list) > 0) {
                             if (!$is_allowed_to_edit && $result_disabled_ext_all) {
                                 $temp[] = '/';
                             } else {
-                                $temp[] = ($score == 0 ? '0/' . $maxscore : ($maxscore == 0 ? $score : $score . '/' . float_format($maxscore, 1)));
+                                $temp[] = ($score == 0 ? '0/' . $maxscore : ($maxscore == 0 ? $score : $score . '/' . Text::float_format($maxscore, 1)));
                             }
                         } else {
-                            $temp[] = ($score == 0 ? '/' : ($maxscore == 0 ? $score : $score . '/' . float_format($maxscore, 1)));
+                            $temp[] = ($score == 0 ? '/' : ($maxscore == 0 ? $score : $score . '/' . Text::float_format($maxscore, 1)));
                         }
                         $temp[] = $time;
                         $csv_content[] = $temp;
@@ -461,7 +460,7 @@ if (is_array($list) && count($list) > 0) {
                 // Check results_disabled in quiz table.
                 $my_path = Database::escape_string($my_path);
 
-                $sql = "SELECT results_disabled FROM $TBL_QUIZ WHERE c_id = $course_id AND id ='" . (int) $my_path . "'";
+                $sql = "SELECT results_disabled FROM $TBL_QUIZ WHERE c_id = $course_id AND iid ='" . (int) $my_path . "'";
                 $res_result_disabled = Database::query($sql);
                 $row_result_disabled = Database::fetch_row($res_result_disabled);
 
@@ -516,7 +515,7 @@ if (is_array($list) && count($list) > 0) {
                                             exe_user_id="' . api_get_user_id() . '" AND
                                             orig_lp_id = "' . $lp_id . '" AND
                                             orig_lp_item_id = "' . $row['myid'] . '" AND
-                                            exe_cours_id="' . $course_code . '" AND
+                                            c_id ="' . $course_id . '" AND
                                             status <> "incomplete" AND
                                             session_id = ' . $session_id . '
                                      ORDER BY exe_date DESC limit 1';
@@ -526,7 +525,7 @@ if (is_array($list) && count($list) > 0) {
                                             exe_user_id="' . $student_id . '" AND
                                             orig_lp_id = "' . $lp_id . '" AND
                                             orig_lp_item_id = "' . $row['myid'] . '" AND
-                                            exe_cours_id="' . $course_code . '" AND
+                                            c_id ="' . $course_id . '" AND
                                             status <> "incomplete" AND
                                             session_id = ' . $session_id . '
                                      ORDER BY exe_date DESC limit 1';
@@ -613,18 +612,20 @@ if (is_array($list) && count($list) > 0) {
                                                     exe_user_id="' . api_get_user_id() . '" AND
                                                     orig_lp_id = "' . $lp_id . '" AND
                                                     orig_lp_item_id = "' . $row['myid'] . '" AND
-                                                    exe_cours_id="' . $course_code . '" AND
+                                                    c_id = "' . $course_id . '" AND
                                                     status <> "incomplete" AND
                                                     session_id = ' . $session_id . '
                                             ORDER BY exe_date DESC ';
                     } else {
+                        $courseInfo = api_get_course_info($_GET['course']);
+
                         $my_url_suffix = '&course=' . Security::remove_XSS($_GET['course']) . '&student_id=' . $student_id . '&lp_id=' . Security::remove_XSS($row['mylpid']) . '&origin=' . Security::remove_XSS($_GET['origin'] . $from_link);
                         $sql_last_attempt = 'SELECT * FROM ' . $tbl_stats_exercices . '
                                              WHERE   exe_exo_id="' . $row['path'] . '" AND
                                                     exe_user_id="' . $student_id . '" AND
                                                     orig_lp_id = "' . $lp_id . '" AND
                                                     orig_lp_item_id = "' . $row['myid'] . '" AND
-                                                    exe_cours_id="' . Database :: escape_string($_GET['course']) . '" AND
+                                                    c_id = "' . $courseInfo['real_id'] . '" AND
                                                     status <> "incomplete" AND
                                                     session_id = ' . $session_id . '
                                              ORDER BY exe_date DESC ';
@@ -681,7 +682,7 @@ if (is_array($list) && count($list) > 0) {
                         if (!$is_allowed_to_edit && $result_disabled_ext_all) {
                             $output .= Display::return_icon('invisible.gif', get_lang('ResultsHiddenByExerciseSetting'));
                         } else {
-                            $output .= show_score($score, $maxscore, false);
+                            $output .= ExerciseLib::show_score($score, $maxscore, false);
                         }
                     } else {
                         $output .= ($score == 0 ? '/' : ($maxscore == 0 ? $score : $score . '/' . $maxscore));
@@ -701,10 +702,10 @@ if (is_array($list) && count($list) > 0) {
                         if (!$is_allowed_to_edit && $result_disabled_ext_all) {
                             $temp[] = '/';
                         } else {
-                            $temp[] = ($score == 0 ? '0/' . $maxscore : ($maxscore == 0 ? $score : $score . '/' . float_format($maxscore, 1)));
+                            $temp[] = ($score == 0 ? '0/' . $maxscore : ($maxscore == 0 ? $score : $score . '/' . Text::float_format($maxscore, 1)));
                         }
                     } else {
-                        $temp[] = ($score == 0 ? '/' : ($maxscore == 0 ? $score : $score . '/' . float_format($maxscore, 1)));
+                        $temp[] = ($score == 0 ? '/' : ($maxscore == 0 ? $score : $score . '/' . Text::float_format($maxscore, 1)));
                     }
                     $temp[] = $time;
                     $csv_content[] = $temp;
@@ -789,12 +790,12 @@ if (is_array($list) && count($list) > 0) {
                             } else {
                                 // Show only float when need it
                                 if ($my_score == 0) {
-                                    $view_score = show_score(0, $my_maxscore, false);
+                                    $view_score = ExerciseLib::show_score(0, $my_maxscore, false);
                                 } else {
                                     if ($my_maxscore == 0) {
                                         $view_score = $my_score;
                                     } else {
-                                        $view_score = show_score($my_score, $my_maxscore, false);
+                                        $view_score = ExerciseLib::show_score($my_score, $my_maxscore, false);
                                     }
                                 }
                             }
@@ -856,34 +857,34 @@ if (!empty($a_my_id)) {
         $my_studen_id = intval(api_get_user_id());
         $my_course_id = Database::escape_string(api_get_course_id());
     }
-    //var_dump($my_studen_id, $my_course_id,$a_my_id);
+    $courseInfo = api_get_course_info($my_course_id);
+    $courseId = $courseInfo['real_id'];
     if (isset($_GET['extend_attempt'])) {
         //"Right green cross" extended
-        $total_score = Tracking::get_avg_student_score($my_studen_id, $my_course_id, $a_my_id, api_get_session_id(), false, false);
+        $total_score = Tracking::get_avg_student_score($my_studen_id, $courseId, $a_my_id, api_get_session_id(), false, false);
     } else {
         //"Left green cross" extended
-        $total_score = Tracking::get_avg_student_score($my_studen_id, $my_course_id, $a_my_id, api_get_session_id(), false, true);
+        $total_score = Tracking::get_avg_student_score($my_studen_id, $courseId, $a_my_id, api_get_session_id(), false, true);
     }
 } else {
     // Extend all "left green cross"
     if ($origin == 'tracking') {
         $my_course_id = Database::escape_string($_GET['course']);
-        //    var_dump($student_id, $my_course_id );
-        if (!empty($student_id) && !empty($my_course_id)) {
-            $total_score = Tracking::get_avg_student_score($student_id, $my_course_id, array(intval($_GET['lp_id'])), api_get_session_id(), false, false);
+        $courseInfo = api_get_course_info($my_course_id);
+        $courseId = $courseInfo['real_id'];
+
+        if (!empty($student_id) && !empty($courseId)) {
+            $total_score = Tracking::get_avg_student_score($student_id, $courseId, array(intval($_GET['lp_id'])), api_get_session_id(), false, false);
         } else {
             $total_score = 0;
         }
     } else {
-        $total_score = Tracking::get_avg_student_score(api_get_user_id(), api_get_course_id(), array(intval($_GET['lp_id'])), api_get_session_id(), false, false);
+        $total_score = Tracking::get_avg_student_score(api_get_user_id(), api_get_course_int_id(), array(intval($_GET['lp_id'])), api_get_session_id(), false, false);
     }
 }
 
 $total_time = learnpathItem :: get_scorm_time('js', $total_time);
-//$total_time = str_replace('NaN', '00:00:00' ,$total_time);
 $total_time = str_replace('NaN', '00' . $h . '00\'00"', $total_time);
-//$lp_type = learnpath :: get_type_static($lp_id);
-//$total_percent = 0;
 
 if (!$is_allowed_to_edit && $result_disabled_ext_all) {
     $final_score = Display::return_icon('invisible.gif', get_lang('ResultsHiddenByExerciseSetting'));
@@ -943,3 +944,5 @@ if ($origin != 'tracking') {
 if (empty($export_csv)) {
     echo $output;
 }
+
+Display::display_footer();

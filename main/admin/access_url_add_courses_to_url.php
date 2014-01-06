@@ -17,6 +17,7 @@ require_once api_get_path(LIBRARY_PATH).'urlmanager.lib.php';
 $this_section=SECTION_PLATFORM_ADMIN;
 
 api_protect_global_admin_script();
+
 if (!api_get_multiple_access_url()) {
     header('Location: index.php');
     exit;
@@ -41,32 +42,29 @@ $interbreadcrumb[] = array ('url' => 'access_urls.php', 'name' => get_lang('Mult
 Display :: display_header($tool_name);
 
 echo '<div class="actions">';
-echo Display::url(
-    Display::return_icon('edit.png', get_lang('EditCoursesToURL'), ''),
-    api_get_path(WEB_CODE_PATH).'admin/access_url_edit_courses_to_url.php'
-);
+echo Display::url(Display::return_icon('edit.gif',get_lang('EditCoursesToURL'),''), api_get_path(WEB_CODE_PATH).'admin/access_url_edit_courses_to_url.php"');
 echo '</div>';
 
 api_display_tool_title($tool_name);
 
-if (isset($_POST['form_sent']) && $_POST['form_sent']) {
-    $form_sent = $_POST['form_sent'];
-    $courses = is_array($_POST['course_list']) ? $_POST['course_list'] : array() ;
-    $url_list = is_array($_POST['url_list']) ? $_POST['url_list'] : array() ;
-    $first_letter_course = $_POST['first_letter_course'];
+if ($_POST['form_sent']) {
+	$form_sent = $_POST['form_sent'];
+	$courses = is_array($_POST['course_list']) ? $_POST['course_list'] : array() ;
+	$url_list = is_array($_POST['url_list']) ? $_POST['url_list'] : array() ;
+	$first_letter_course = $_POST['first_letter_course'];
 
-    foreach ($users as $key => $value) {
-        $users[$key] = intval($value);
-    }
+	foreach($users as $key => $value) {
+		$users[$key] = intval($value);
+	}
 
-    if ($form_sent == 1) {
-        if (count($courses) == 0 || count($url_list) == 0) {
-            Display :: display_error_message(get_lang('AtLeastOneCourseAndOneURL'));
-        } else {
-            UrlManager::add_courses_to_urls($courses, $url_list);
-            Display :: display_confirmation_message(get_lang('CourseBelongURL'));
-        }
-    }
+	if ($form_sent == 1) {
+		if ( count($courses) == 0 || count($url_list) == 0) {
+			Display :: display_error_message(get_lang('AtLeastOneCourseAndOneURL'));
+		} else {
+			UrlManager::add_courses_to_urls($courses, $url_list);
+			Display :: display_confirmation_message(get_lang('CourseBelongURL'));
+		}
+	}
 }
 
 if (empty($first_letter_user)) {
@@ -82,7 +80,7 @@ if (empty($first_letter_user)) {
 }
 
 $first_letter_course = Database::escape_string($first_letter_course);
-$sql = "SELECT code, title FROM $tbl_course
+$sql = "SELECT code, title, id FROM $tbl_course
 		WHERE title LIKE '".$first_letter_course."%' OR title LIKE '".api_strtolower($first_letter_course)."%'
 		ORDER BY title, code DESC ";
 
@@ -120,10 +118,13 @@ unset($result);
    <tr>
     <td width="40%" align="center">
      <select name="course_list[]" multiple="multiple" size="20" style="width:400px;">
-		<?php foreach ($db_courses as $course) { ?>
-			<option value="<?php echo $course['code']; ?>" <?php if(in_array($course['code'],$courses)) echo 'selected="selected"'; ?>><?php echo $course['title'].' ('.$course['code'].')'; ?>
-            </option>
-        <?php } ?>
+		<?php
+		foreach ($db_courses as $course) {
+			?>
+			<option value="<?php echo $course['id']; ?>" <?php if(in_array($course['code'],$courses)) echo 'selected="selected"'; ?>><?php echo $course['title'].' ('.$course['code'].')'; ?></option>
+			<?php
+		}
+		?>
     </select>
    </td>
    <td width="20%" valign="middle" align="center">

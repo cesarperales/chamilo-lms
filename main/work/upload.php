@@ -33,7 +33,9 @@ if (empty($work_id)) {
     api_not_allowed(true);
 }
 
-$workInfo = get_work_data_by_id($work_id);
+allowOnlySubscribedUser($user_id, $work_id, $course_id);
+
+$parent_data = $my_folder_data = get_work_data_by_id($work_id);
 
 if (empty($workInfo)) {
     api_not_allowed(true);
@@ -69,18 +71,115 @@ if (!empty($workInfo) && !empty($workInfo['qualification'])) {
     }
 }*/
 
-$homework = get_work_assignment_by_id($workInfo['id']);
-$validationStatus = getWorkDateValidationStatus($homework);
+$has_expired = false;
+$has_ended   = false;
+$message = null;
+
+if (!empty($my_folder_data)) {
+    $homework = get_work_assignment_by_id($my_folder_data['id']);
+
+    if ($homework['expires_on'] != '0000-00-00 00:00:00' || $homework['ends_on'] != '0000-00-00 00:00:00') {
+        $time_now = time();
+
+        if (!empty($homework['expires_on']) && $homework['expires_on'] != '0000-00-00 00:00:00') {
+            $time_expires 	= api_strtotime($homework['expires_on'], 'UTC');
+            $difference 	= $time_expires - $time_now;
+            if ($difference < 0) {
+                $has_expired = true;
+            }
+        }
+
+        if (empty($homework['expires_on']) || $homework['expires_on'] == '0000-00-00 00:00:00') {
+            $has_expired = false;
+        }
+
+        if (!empty($homework['ends_on']) && $homework['ends_on'] != '0000-00-00 00:00:00') {
+            $time_ends 		= api_strtotime($homework['ends_on'], 'UTC');
+            $difference2 	= $time_ends - $time_now;
+            if ($difference2 < 0) {
+                $has_ended = true;
+            }
+        }
+
+        $ends_on 	= api_convert_and_format_date($homework['ends_on']);
+        $expires_on = api_convert_and_format_date($homework['expires_on']);
+    }
+
+    if ($has_ended) {
+        $message = Display::return_message(get_lang('EndDateAlreadyPassed').' '.$ends_on, 'error');
+    } elseif ($has_expired) {
+        $message = Display::return_message(get_lang('ExpiryDateAlreadyPassed').' '.$expires_on, 'warning');
+    } else {
+        if ($has_expired) {
+            $message = Display::return_message(get_lang('ExpiryDateToSendWorkIs').' '.$expires_on);
+        }
+    }
+}
 
 $interbreadcrumb[] = array('url' => api_get_path(WEB_CODE_PATH).'work/work.php?'.api_get_cidreq(), 'name' => get_lang('StudentPublications'));
-$interbreadcrumb[] = array('url' => api_get_path(WEB_CODE_PATH).'work/work_list.php?'.api_get_cidreq().'&id='.$work_id, 'name' =>  $workInfo['title']);
-$interbreadcrumb[] = array('url' => '#', 'name'  => get_lang('UploadADocument'));
+$interbreadcrumb[] = array('url' => api_get_path(WEB_CODE_PATH).'work/work_list.php?'.api_get_cidreq().'&id='.$work_id, 'name' =>  $parent_data['title']);
+
+// form title
+$form_title = get_lang('UploadADocument');
+
+$interbreadcrumb[] = array('url' => '#', 'name'  => $form_title);
+
+$form = new FormValidator('form', 'POST', api_get_self()."?".api_get_cidreq()."&id=".$work_id."&gradebook=".Security::remove_XSS($_GET['gradebook'])."&origin=$origin", '', array('enctype' => "multipart/form-data"));
+$form->addElement('header', $form_title);
+
+$show_progress_bar = false;
+
+if ($submitGroupWorkUrl) {
+    // For user coming from group space to publish his work
+    $realUrl = str_replace($_configuration['root_sys'], api_get_path(WEB_PATH), str_replace("\\", '/', realpath($submitGroupWorkUrl)));
+    $form->addElement('hidden', 'newWorkUrl', $submitGroupWorkUrl);
+    $text_document = $form->addElement('text', 'document', get_lang('Document'));
+    $defaults['document'] = '<a href="' . format_url($submitGroupWorkUrl) . '">' . $realUrl . '</a>';
+    $text_document->freeze();
+} else {
+    // else standard upload option
+    $form->addElement('file', 'file', get_lang('UploadADocument'), 'size="40" onchange="updateDocumentTitle(this.value)"');
+    $show_progress_bar = true;
+}
 
 $form = new FormValidator('form', 'POST', api_get_self()."?".api_get_cidreq()."&id=".$work_id, '', array('enctype' => "multipart/form-data"));
 setWorkUploadForm($form);
 $form->addElement('hidden', 'id', $work_id);
+$form->addElement('hidden', 'contains_file', 0, array('id'=>'contains_file_id'));
+$form->addElement('text', 'title', get_lang('Title'), array('id' => 'file_upload', 'class' => 'span4'));
+$form->add_html_editor('description', get_lang('Description'), false, false, getWorkDescriptionToolbar());
+
+$form->addElement('hidden', 'active', 1);
+$form->addElement('hidden', 'accepted', 1);
 $form->addElement('hidden', 'sec_token', $token);
 
+$text = get_lang('Send');
+$class = 'upload';
+
+// fix the Ok button when we see the tool in the learn path
+if ($origin == 'learnpath') {
+    $form->addElement('html', '<div style="margin-left:137px">');
+    $form->addElement('style_submit_button', 'submitWork', $text, array('class'=> $class, 'value' => "submitWork"));
+    $form->addElement('html', '</div>');
+} else {
+    $form->addElement('style_submit_button', 'submitWork', $text, array('class'=> $class, 'value' => "submitWork"));
+}
+
+if (!empty($_POST['submitWork']) || $item_id) {
+    $form->addElement('style_submit_button', 'cancelForm', get_lang('Cancel'), 'class="cancel"');
+}
+
+if ($show_progress_bar) {
+    $form->add_real_progress_bar('uploadWork', 'file');
+}
+
+$documentTemplateData = getDocumentTemplateFromWork($work_id, $course_info);
+if (!empty($documentTemplateData)) {
+    $defaults['title'] = $userInfo['complete_name'].'_'.$documentTemplateData['title'].'_'.substr(api_get_utc_datetime(), 0, 10);
+    $defaults['description'] = $documentTemplateData['file_content'];
+}
+
+$form->setDefaults($defaults);
 $error_message = null;
 
 $succeed = false;
@@ -108,14 +207,23 @@ $htmlHeadXtra[] = to_javascript_work();
 Display :: display_header(null);
 
 if (!empty($work_id)) {
-    echo $validationStatus['message'];
+
+    echo $message;
+
     if ($is_allowed_to_edit) {
         if (api_resource_is_locked_by_gradebook($work_id, LINK_STUDENTPUBLICATION)) {
             echo Display::display_warning_message(get_lang('ResourceLockedByGradebook'));
         } else {
             $form->display();
         }
-    } elseif ($student_can_edit_in_session && $validationStatus['has_ended'] == false) {
+    } elseif ($is_author) {
+        if (empty($work_item['qualificator_id']) || $work_item['qualificator_id'] == 0) {
+            $form->display();
+        } else {
+            Display::display_error_message(get_lang('ActionNotAllowed'));
+        }
+    } elseif ($student_can_edit_in_session && $has_ended == false) {
+
         $form->display();
     } else {
         Display::display_error_message(get_lang('ActionNotAllowed'));

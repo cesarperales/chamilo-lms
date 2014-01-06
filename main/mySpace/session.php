@@ -11,7 +11,6 @@ $language_file = array ('registration', 'index', 'trad4all', 'tracking', 'admin'
 $cidReset = true;
 
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'export.lib.inc.php';
 
 api_block_anonymous_users();
 
@@ -59,12 +58,17 @@ function rsort_sessions($a, $b) {
 if (isset($_GET['id_coach']) && $_GET['id_coach'] != '') {
 	$id_coach = intval($_GET['id_coach']);
 } else {
-	$id_coach = $_user['user_id'];
+	$id_coach = api_get_user_id();
 }
 
 if (api_is_drh() || api_is_session_admin() || api_is_platform_admin()) {
 
-	$a_sessions = SessionManager::get_sessions_followed_by_drh(api_get_user_id());
+    $a_sessions = SessionManager :: get_sessions_coached_by_user(api_get_user_id());
+	$a_sessions_drh = SessionManager::get_sessions_followed_by_drh(api_get_user_id());
+
+    if (!empty($a_sessions_drh)) {
+        $a_sessions = array_merge($a_sessions, $a_sessions_drh);
+    }
 
 	if (!api_is_session_admin()) {
 		$menu_items[] = Display::url(Display::return_icon('stats.png', get_lang('MyStats'),'',ICON_SIZE_MEDIUM),api_get_path(WEB_CODE_PATH)."auth/my_progress.php" );
@@ -81,6 +85,7 @@ if (api_is_drh() || api_is_session_admin() || api_is_platform_admin()) {
 			echo $item;
 		}
 	}
+
 	if (count($a_sessions) > 0) {
 		echo '<span style="float:right">';
 		echo Display::url(Display::return_icon('printer.png', get_lang('Print'), array(), 32), 'javascript: void(0);', array('onclick'=>'javascript: window.print();'));
@@ -91,7 +96,11 @@ if (api_is_drh() || api_is_session_admin() || api_is_platform_admin()) {
 	echo Display::page_header(get_lang('YourSessionsList'));
 
 } else {
-    $a_sessions = Tracking :: get_sessions_coached_by_user($id_coach);
+	/*if (api_is_platform_admin()) {
+		$a_sessions = SessionManager::get_sessions_list();
+	} else {*/
+		$a_sessions = SessionManager :: get_sessions_coached_by_user($id_coach);
+	//}
 }
 
 $nb_sessions = count($a_sessions);
@@ -112,13 +121,7 @@ if ($nb_sessions > 0) {
 	foreach ($a_sessions as $session) {
 		$row = array();
 		$row[] = $session['name'];
-
-		if ($session['date_start'] != '0000-00-00' && $session['date_end'] != '0000-00-00') {
-			$row[] = get_lang('From').' '. api_convert_and_format_date($session['date_start'], DATE_FORMAT_SHORT, date_default_timezone_get()).' '.get_lang('To').' '.api_convert_and_format_date($session['date_end'], DATE_FORMAT_SHORT, date_default_timezone_get());
-		} else {
-			$row[] = ' - ';
-		}
-
+		$row[] = SessionManager::parse_session_dates($session);
 		$row[] = count(Tracking::get_courses_list_from_session($session['id']));
 
 		if ($export_csv) {

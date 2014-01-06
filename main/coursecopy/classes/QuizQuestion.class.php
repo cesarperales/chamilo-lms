@@ -21,60 +21,64 @@ class QuizQuestion extends Resource
     /**
      * The question
      */
-    var $question;
+    public $question;
 
     /**
      * The description
      */
-    var $description;
+    public $description;
 
     /**
      * Ponderation
      */
-    var $ponderation;
+    public $ponderation;
 
     /**
      * Type
      */
-    var $quiz_type;
+    public $quiz_type;
 
     /**
      * Position
      */
-    var $position;
+    public $position;
 
     /**
      * Level
      */
-    var $level;
+    public $level;
 
     /**
      * Answers
      */
-    var $answers;
+    public $answers;
 
     /**
      * Picture
      */
-    var $picture;
-    var $extra;
+    public $picture;
+    public $extra;
+    public $categories;
+    public $parent_info;
 
     /**
-     * @var int the question category if any, 0 by default
+     * * Create a new QuizQuestion
+     * @param $id
+     * @param $question
+     * @param $description
+     * @param $ponderation
+     * @param $type
+     * @param $position
+     * @param $picture
+     * @param $level
+     * @param $extra
+     * @param $parent_info
+     * @param $categories
      */
-
-    var $question_category;
-
-    /**
-     * Create a new QuizQuestion
-     * @param string $question
-     * @param string $description
-     * @param int $ponderation
-     * @param int $type
-     * @param int $position
-     */
-    function QuizQuestion($id, $question, $description, $ponderation, $type, $position, $picture, $level, $extra, $question_category = 0) {
+    function QuizQuestion($id, $question, $description, $ponderation, $type, $position, $picture, $level, $extra, $parent_info, $categories)
+    {
         parent::Resource($id, RESOURCE_QUIZQUESTION);
+
         $this->question = $question;
         $this->description = $description;
         $this->ponderation = $ponderation;
@@ -84,15 +88,17 @@ class QuizQuestion extends Resource
         $this->level = $level;
         $this->answers = array();
         $this->extra = $extra;
-        $this->question_category = $question_category;
+        $this->parent_info = $parent_info;
+        $this->categories = $categories;
     }
 
     /**
      * Add an answer to this QuizQuestion
      */
-    function add_answer($answer_id, $answer_text, $correct, $comment, $ponderation, $position, $hotspot_coordinates, $hotspot_type) {
+    function add_answer($answer_id, $answer_text, $correct, $comment, $ponderation, $position, $hotspot_coordinates, $hotspot_type)
+    {
         $answer = array();
-        $answer['id'] = $answer_id;
+        $answer['iid'] = $answer_id;
         $answer['answer'] = $answer_text;
         $answer['correct'] = $correct;
         $answer['comment'] = $comment;
@@ -103,14 +109,19 @@ class QuizQuestion extends Resource
         $this->answers[] = $answer;
     }
 
-    function add_option($option_obj) {
+    /**
+     * @param $option_obj
+     */
+    function add_option($option_obj)
+    {
         $this->question_options[$option_obj->obj->id] = $option_obj;
     }
 
     /**
      * Show this question
      */
-    function show() {
+    function show()
+    {
         parent::show();
         echo $this->question;
     }

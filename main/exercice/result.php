@@ -17,14 +17,11 @@ $language_file = array('exercice');
 require_once 'exercise.class.php';
 require_once 'question.class.php';
 require_once 'answer.class.php';
-
 require_once '../inc/global.inc.php';
-require_once 'exercise.lib.php';
 
 if (empty($origin)) {
-    $origin = $_REQUEST['origin'];
+    $origin = isset($_REQUEST['origin']) ? $_REQUEST['origin'] : null;
 }
-
 $id 	       = isset($_REQUEST['id']) 	  ? intval($_GET['id']) : null; //exe id
 $show_headers  = isset($_REQUEST['show_headers']) ? intval($_REQUEST['show_headers']) : null; //exe id
 
@@ -38,10 +35,10 @@ if (empty($id)) {
 	api_not_allowed($show_headers);
 }
 
-$is_allowedToEdit   = api_is_allowed_to_edit(null,true) || $is_courseTutor;
+$is_allowedToEdit = api_is_allowed_to_edit(null,true) || $is_courseTutor;
 
 //Getting results from the exe_id. This variable also contain all the information about the exercise
-$track_exercise_info = get_exercise_track_exercise_info($id);
+$track_exercise_info = ExerciseLib::get_exercise_track_exercise_info($id);
 
 //No track info
 if (empty($track_exercise_info)) {
@@ -61,7 +58,7 @@ if (!empty($exercise_id)) {
 //Only users can see their own results
 if (!$is_allowedToEdit) {
     if ($student_id != $current_user_id) {
-    	api_not_allowed($show_headers);
+        api_not_allowed($show_headers);
     }
 }
 
@@ -69,13 +66,11 @@ if ($show_headers) {
 	$interbreadcrumb[] = array("url" => "exercice.php","name" => get_lang('Exercices'));
 	$interbreadcrumb[] = array("url" => "#","name" => get_lang('Result'));
 	$this_section = SECTION_COURSES;
-	Display::display_header();
+    Display::display_header();
 } else {
-	Display::display_reduced_header();
+    Display::display_reduced_header();
 }
 
-display_question_list_by_attempt($objExercise, $id, false);
+$objExercise->displayQuestionListByAttempt($id, false);
 
-if ($show_headers) {
-	Display::display_footer();
-}
+Display::display_footer();

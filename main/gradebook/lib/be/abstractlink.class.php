@@ -292,17 +292,70 @@ abstract class AbstractLink implements GradebookItem
         $tbl_grade_links = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_LINK);
         $sql = "UPDATE $tbl_grade_links SET
                     type        = ".intval($this->get_type()).",
-                    ref_id      = ".intval($this->get_ref_id()).",
-                    user_id     = ".intval($this->get_user_id()).",
-                    course_code = '".Database::escape_string($this->get_course_code())."',
-                    category_id = ".intval($this->get_category_id()).",
-                    weight      = '".Database::escape_string($this->get_weight())."',
-                    visible     = ".intval($this->is_visible())."
-                 WHERE id = ".intval($this->id);
+				    ref_id      = ".intval($this->get_ref_id()).",
+				    user_id     = ".intval($this->get_user_id()).",
+				    course_code = '".Database::escape_string($this->get_course_code())."',
+				    category_id = ".intval($this->get_category_id()).",
+		            weight      = '".Database::escape_string($this->get_weight())."',
+				    visible     = ".intval($this->is_visible())."
+			     WHERE id = ".intval($this->id);
 
-        AbstractLink::add_link_log($this->id);
+		AbstractLink::add_link_log($this->id);
 
-        Database::query($sql);
+		Database::query($sql);
+	}
+
+	public function add_link_log($idevaluation) {
+		$tbl_grade_linkeval_log = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_LINKEVAL_LOG);
+		$dateobject=AbstractLink::load ($idevaluation,null,null,null,null);
+		$current_date_server=api_get_utc_datetime();
+		$arreval=get_object_vars($dateobject[0]);
+		$description_log=isset($arreval['description'])?$arreval['description']:'';
+		if (isset($_POST['name_link'])) {
+			$name_log=isset($_POST['name_link'])?Security::remove_XSS($_POST['name_link']):$arreval['course_code'];
+		} elseif ($_POST['link_'.$idevaluation]) {
+			$name_log=$_POST['link_'.$idevaluation];
+		} else {
+			$name_log=$arreval['course_code'];
+		}
+		$sql="INSERT INTO ".$tbl_grade_linkeval_log."(id_linkeval_log,name,description,created_at,weight,visible,type,user_id_log)
+			  VALUES('".Database::escape_string($arreval['id'])."','".Database::escape_string($name_log)."','".Database::escape_string($description_log)."','".Database::escape_string($current_date_server)."','".Database::escape_string($arreval['weight'])."','".Database::escape_string($arreval['visible'])."','Link',".api_get_user_id().")";
+
+		Database::query($sql);
+
+	}
+	/**
+	 * Delete this link from the database
+	 */
+	public function delete() {
+		$this->delete_linked_data();
+		$tbl_grade_links = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_LINK);
+		$sql = 'DELETE FROM '.$tbl_grade_links.' WHERE id = '.intval($this->id);
+		Database::query($sql);
+	}
+
+
+// OTHER FUNCTIONS
+
+	/**
+	 * Generate an array of possible categories where this link can be moved to.
+	 * Notice: its own parent will be included in the list: it's up to the frontend
+	 * to disable this element.
+	 * @return array 2-dimensional array - every element contains 3 subelements (id, name, level)
+	 */
+    public function get_target_categories() {
+    	// links can only be moved to categories inside this course
+
+		$targets = array();
+		$level = 0;
+
+		$crscats = Category::load(null,null,$this->get_course_code(),0);
+		foreach ($crscats as $cat) {
+			$targets[] = array ($cat->get_id(), $cat->get_name(), $level+1);
+			$targets = $this->add_target_subcategories($targets, $level+1, $cat->get_id());
+		}
+
+		return $targets;
     }
 
     /**

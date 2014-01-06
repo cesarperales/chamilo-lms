@@ -11,8 +11,8 @@ $language_file = array('userInfo', 'index');
 $cidReset = true;
 require_once '../inc/global.inc.php';
 
-if (api_get_setting('allow_social_tool') !='true') {
-    $url = api_get_path(WEB_PATH).'whoisonline.php?id='.intval($_GET['u']);
+if (api_get_setting('allow_social_tool') != 'true') {
+    $url = api_get_path(WEB_CODE_PATH).'social/profile.php?u='.intval($_GET['u']);
     header('Location: '.$url);
     exit;
 }
@@ -59,7 +59,6 @@ if (isset($_GET['u'])) {
 }
 $libpath = api_get_path(LIBRARY_PATH);
 require_once api_get_path(SYS_CODE_PATH).'calendar/myagenda.inc.php';
-require_once api_get_path(SYS_CODE_PATH).'announcements/announcements.inc.php';
 
 require_once $libpath.'magpierss/rss_fetch.inc';
 $ajax_url = api_get_path(WEB_AJAX_PATH).'message.ajax.php';
@@ -97,7 +96,6 @@ function send_message_to_user(user_id) {
                     $.ajax({
                         url: url+"&"+params,
                         success:function(data) {
-                            $("#message_ajax_reponse").attr("class", "");
                             $("#message_ajax_reponse").html(data);
                             $("#message_ajax_reponse").show();
                             $("#send_message_div").dialog({ buttons:{}});
@@ -133,7 +131,6 @@ function send_invitation_to_user(user_id) {
                     $.ajax({
                         url: url+"&"+params,
                         success:function(data) {
-                            $("#message_ajax_reponse").attr("class", "");
                             $("#message_ajax_reponse").html(data);
                             $("#message_ajax_reponse").show();
 
@@ -277,11 +274,10 @@ $personal_course_list = UserManager::get_personal_session_course_list($my_user_i
 
 $course_list_code = array();
 $i=1;
-
 if (is_array($personal_course_list)) {
     foreach ($personal_course_list as $my_course) {
         if ($i<=10) {
-            $list[] = SocialManager::get_logged_user_course_html($my_course, $i);
+            $list[$my_course['code']] = SocialManager::get_logged_user_course_html($my_course, $i);
             $course_list_code[] = array('code'=> $my_course['code']);
         } else {
             break;
@@ -289,7 +285,7 @@ if (is_array($personal_course_list)) {
         $i++;
     }
     //to avoid repeted courses
-    $course_list_code = array_unique_dimensional($course_list_code);
+    $course_list_code = ArrayClass::array_unique_dimensional($course_list_code);
 }
 
 $social_left_content = SocialManager::show_social_menu('shared_profile', null, $user_id, $show_full_profile);
@@ -380,7 +376,7 @@ if ($show_full_profile) {
                 $friend_html.= '<img src="'.$friends_profile['file'].'"  id="imgfriend_'.$friend['friend_user_id'].'" title="'.$name_user.'" />';
 
                 $friend_html.= '<div class="caption">';
-                $friend_html.= $status_icon.'<a href="profile.php?u='.$friend['friend_user_id'].'&amp;'.$link_shared.'">';
+                $friend_html.= $status_icon.'<a href="'.$user_info_friend['profile_url'].'">';
                 $friend_html.= $name_user;
                 $friend_html.= '</a></div>';
                 $friend_html.= '</div>';
@@ -394,7 +390,7 @@ if ($show_full_profile) {
         $friend_html .= '<div><h3>'.get_lang('SocialFriend').'</h3></div>';
         $friend_html.= '<div id="friend-container" class="social-friend-container">';
         $friend_html.= '<div id="friend-header">';
-        $friend_html.= '<div>'.get_lang('NoFriendsInYourContactList').'<br /><a class="btn" href="'.api_get_path(WEB_PATH).'whoisonline.php">'.get_lang('TryAndFindSomeFriends').'</a></div>';
+        $friend_html.= '<div>'.get_lang('NoFriendsInYourContactList').'<br /><a class="btn" href="'.api_get_path(WEB_PUBLIC_PATH).'users/online">'.get_lang('TryAndFindSomeFriends').'</a></div>';
         $friend_html.= '</div>'; // close div friend-header
     }
     $friend_html.= '</div>';
@@ -426,7 +422,7 @@ if ($show_full_profile) {
                 if (is_array($data)) {
                     $extra_information_value .= '<dt>'.ucfirst($field_display_text).'</dt><dd> '.implode(',',$data).'</dd>';
                 } else {
-                    if ($field_type == USER_FIELD_TYPE_DOUBLE_SELECT) {
+                    if ($field_type == Extrafield::FIELD_TYPE_DOUBLE_SELECT) {
                         $id_options = explode(';',$data);
                         $value_options = array();
                         // get option display text from user_field_options table
@@ -437,7 +433,7 @@ if ($show_full_profile) {
                             $value_options[] = $row_options[0];
                         }
                         $extra_information_value .= '<dt>'.ucfirst($field_display_text).':</dt><dd>'.implode(' ',$value_options).'</dd>';
-                    } elseif($field_type == USER_FIELD_TYPE_TAG ) {
+                    } elseif($field_type == Extrafield::FIELD_TYPE_TAG ) {
                         $user_tags = UserManager::get_user_tags($user_id, $field_id);
                         $tag_tmp = array();
                         foreach ($user_tags as $tags) {
@@ -446,7 +442,7 @@ if ($show_full_profile) {
                         if (is_array($user_tags) && count($user_tags)>0) {
                             $extra_information_value .= '<dt>'.ucfirst($field_display_text).':</dt><dd>'.implode('', $tag_tmp).'</dd>';
                         }
-                    } elseif ($field_type == USER_FIELD_TYPE_SOCIAL_PROFILE) {
+                    } elseif ($field_type == Extrafield::FIELD_TYPE_SOCIAL_PROFILE) {
                         $icon_path = UserManager::get_favicon_from_url($data);
                         $bottom = '0.3';
                         //quick hack for hi5
@@ -472,31 +468,35 @@ if ($show_full_profile) {
         $social_right_content .=  SocialManager::social_wrapper_div($extra_information, 9);
     }
 
+    $usergroup = new UserGroup();
+
     // MY GROUPS
-    $results = GroupPortalManager::get_groups_by_user($my_user_id, 0);
+    $results = $usergroup->get_groups_by_user($my_user_id, 0);
     $grid_my_groups = array();
     $max_numbers_of_group = 4;
     if (is_array($results) && count($results) > 0) {
         $i = 1;
         foreach ($results as $result) {
-            if ($i > $max_numbers_of_group) break;
+            if ($i > $max_numbers_of_group) {
+                break;
+            }
             $id = $result['id'];
             $url_open  = '<a href="groups.php?id='.$id.'">';
             $url_close = '</a>';
             $icon = '';
-            $name = cut($result['name'],CUT_GROUP_NAME,true);
+            $name = Text::cut($result['name'],CUT_GROUP_NAME,true);
             if ($result['relation_type'] == GROUP_USER_PERMISSION_ADMIN) {
                 $icon = Display::return_icon('social_group_admin.png', get_lang('Admin'), array('style'=>'vertical-align:middle;width:16px;height:16px;'));
             } elseif ($result['relation_type'] == GROUP_USER_PERMISSION_MODERATOR) {
                 $icon = Display::return_icon('social_group_moderator.png', get_lang('Moderator'), array('style'=>'vertical-align:middle;width:16px;height:16px;'));
             }
-            $count_users_group = count(GroupPortalManager::get_all_users_by_group($id));
+            $count_users_group = count($usergroup->get_all_users_by_group($id));
             if ($count_users_group == 1 ) {
                 $count_users_group = $count_users_group.' '.get_lang('Member');
             } else {
                 $count_users_group = $count_users_group.' '.get_lang('Members');
             }
-            //$picture = GroupPortalManager::get_picture_group($result['id'], $result['picture_uri'],80);
+
             $item_name = $url_open.$name.$icon.$url_close;
 
             if ($result['description'] != '') {
@@ -509,7 +509,7 @@ if ($show_full_profile) {
             if (api_get_user_id() == $user_id) {
                 //$item_actions = '<div class="box_shared_profile_group_actions"><a href="groups.php?id='.$id.'">'.get_lang('SeeMore').$url_close.'</div>';
             }
-            $grid_my_groups[]= array($item_name,$url_open.$result['picture_uri'].$url_close, $item_actions);
+            $grid_my_groups[]= array($item_name,$url_open.$result['picture'].$url_close, $item_actions);
             $i++;
         }
     }
@@ -544,17 +544,17 @@ if ($show_full_profile) {
         $social_right_content .=  SocialManager::social_wrapper_div($my_groups, 9);
     }
 
-    $my_courses = null;
     // COURSES LIST
-    if ( is_array($list) ) {
+    $my_courses = null;
+    if (isset($list) && !empty($list)) {
         $my_courses .=  '<div><h3>'.api_ucfirst(get_lang('MyCourses')).'</h3></div>';
         $my_courses .=  '<div class="social-content-training">';
 
         //Courses without sessions
         $i=1;
-        foreach ($list as $key=>$value) {
-            if ( empty($value[2]) ) { //if out of any session
-                $my_courses .=  $value[1];
+        foreach ($list as $value) {
+            if (!empty($value)) { //if out of any session
+                $my_courses .=  $value;
                 $my_courses .=  '<div id="social_content'.$i.'" class="course_social_content" style="display:none" >s</div>';
                 $i++;
             }
@@ -589,6 +589,7 @@ if ($show_full_profile) {
         $count_pending_invitations = count($pending_invitations);
     }
 
+
     if (!empty($production_list) || !empty($file_list) || $count_pending_invitations > 0) {
 
         //Pending invitations
@@ -604,9 +605,9 @@ if ($show_full_profile) {
 
                         $invitations .=  '<div style="padding-left:70px;">';
                             $user_invitation_info = api_get_user_info($user_invitation_id);
-                            $invitations .=  '<a href="'.api_get_path(WEB_PATH).'main/social/profile.php?u='.$user_invitation_id.'">'.api_get_person_name($user_invitation_info['firstname'], $user_invitation_info['lastname']).'</a>';
+                            $invitations .=  '<a href="'.$user_invitation_info['profile_url'].'">'.$user_invitation_info['complete_name'].'</a>';
                             $invitations .=  '<br />';
-                            $invitations .=  Security::remove_XSS(cut($pending_invitations[$i]['content'], 50), STUDENT, true);
+                            $invitations .=  Security::remove_XSS(Text::cut($pending_invitations[$i]['content'], 50), STUDENT, true);
                             $invitations .=  '<br />';
                             $invitations .=  '<a id="btn_accepted_'.$user_invitation_id.'" class="btn" onclick="register_friend(this)" href="javascript:void(0)">'.get_lang('SocialAddToFriends').'</a>';
                             $invitations .=  '<div id="id_response"></div>';
@@ -641,6 +642,7 @@ if ($show_full_profile) {
     if (!empty($user_info['competences']) || !empty($user_info['diplomas']) || !empty($user_info['openarea']) || !empty($user_info['teach']) ) {
 
         $more_info .=  '<div><h3>'.get_lang('MoreInformation').'</h3></div>';
+        $cut_size = 220;
         if (!empty($user_info['competences'])) {
             $more_info .=  '<br />';
                 $more_info .=  '<div class="social-actions-message"><strong>'.get_lang('MyCompetences').'</strong></div>';
@@ -668,10 +670,10 @@ if ($show_full_profile) {
 $social_right_content .= MessageManager::generate_message_form('send_message');
 $social_right_content .= MessageManager::generate_invitation_form('send_invitation');
 
+$app['title'] = get_lang('Social');
+$tpl = $app['template'];
 
-$tpl = new Template(get_lang('Social'));
 $tpl->assign('social_left_content', $social_left_content);
 $tpl->assign('social_right_content', $social_right_content);
-
 $social_layout = $tpl->get_template('layout/social_layout.tpl');
 $tpl->display($social_layout);

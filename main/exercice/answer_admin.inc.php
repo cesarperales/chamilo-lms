@@ -17,6 +17,8 @@ if (!is_object($objQuestion)) {
     $objQuestion = Question :: read($_GET['modifyAnswers']);
 }
 
+$urlMainExercise = api_get_path(WEB_CODE_PATH).'exercice/';
+
 $questionName = $objQuestion->selectTitle();
 $answerType = $objQuestion->selectType();
 $pictureName = $objQuestion->selectPicture();
@@ -55,7 +57,7 @@ if ($modifyIn) {
 
         // construction of the duplicated Answers
 
-        $objAnswer = new Answer($questionId);
+        $objAnswer = new Answer($questionId, null, $objExercise);
     }
     if ($answerType == UNIQUE_ANSWER || $answerType == MULTIPLE_ANSWER || $answerType == MULTIPLE_ANSWER_COMBINATION || $answerType == GLOBAL_MULTIPLE_ANSWER) {
         $correct = unserialize($correct);
@@ -147,11 +149,7 @@ if ($submitAnswers || $buttonBack) {
             } else {
                 // adds the answer into the object
                 $objAnswer->createAnswer($reponse[$i], $goodAnswer, $comment[$i], $weighting[$i], $i);
-                //added
-                //if($_REQUEST['myid']==1)
-                $mainurl = "admin.php";
-                //	else
-                //  $mainurl="question_pool.php";
+                $mainurl = $urlMainExercise."admin.php";
                 ?>
                 <script>
                     window.location.href='<?php echo $mainurl; ?>';
@@ -220,10 +218,7 @@ if ($submitAnswers || $buttonBack) {
                     $objAnswer->createAnswer($reponse, 0, '', 0, '');
                     $objAnswer->save();
                     //added
-                    //if($_REQUEST['myid']==1)
-                    $mainurl = "admin.php";
-                    //	else
-                    //  $mainurl="question_pool.php";
+                    $mainurl = $urlMainExercise."admin.php";
                     ?>
                     <script>
                         window.location.href='<?php echo $mainurl; ?>';
@@ -330,14 +325,9 @@ if ($submitAnswers || $buttonBack) {
                     // sets the total weighting of the question
                     $objQuestion->updateWeighting($weighting);
                     $objQuestion->save($exerciseId);
-
                     $editQuestion = $questionId;
-
                     unset($modifyAnswers); //added
-                    //if($_REQUEST['myid']==1)
-                    $mainurl = "admin.php";
-                    //	else
-                    //  $mainurl="question_pool.php";
+                    $mainurl = $urlMainExercise."admin.php";
                     ?>
                     <script>
                         window.location.href='<?php echo $mainurl; ?>';
@@ -411,11 +401,7 @@ if ($submitAnswers || $buttonBack) {
                 else {
                     // adds the answer into the object
                     $objAnswer->createAnswer($match[$i], $sel[$i], '', $weighting[$i], $i);
-                    //added
-                    //if($_REQUEST['myid']==1)
-                    $mainurl = "admin.php";
-                    //else
-                    //$mainurl="question_pool.php";
+                    $mainurl = $urlMainExercise."admin.php";
                     ?>
                     <script>
                         window.location.href='<?php echo $mainurl; ?>';
@@ -526,7 +512,7 @@ if ($modifyAnswers) {
     }
 
     // construction of the Answer object
-    $objAnswer = new Answer($questionId);
+    $objAnswer = new Answer($questionId, null, $objExercise);
 
     Session::write('objAnswer', $objAnswer);
     if ($answerType == UNIQUE_ANSWER || $answerType == MULTIPLE_ANSWER || $answerType == GLOBAL_MULTIPLE_ANSWER) {

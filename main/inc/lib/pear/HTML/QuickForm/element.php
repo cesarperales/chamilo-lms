@@ -42,8 +42,6 @@ require_once 'HTML/Common.php';
  */
 class HTML_QuickForm_element extends HTML_Common
 {
-    // {{{ properties
-
     /**
      * Label of the field
      * @var       string
@@ -76,9 +74,6 @@ class HTML_QuickForm_element extends HTML_Common
      */
     var $_persistantFreeze = false;
 
-    // }}}
-    // {{{ constructor
-
     /**
      * Class constructor
      *
@@ -89,8 +84,29 @@ class HTML_QuickForm_element extends HTML_Common
      * @access    public
      * @return    void
      */
-    function HTML_QuickForm_element($elementName=null, $elementLabel=null, $attributes=null)
+    function HTML_QuickForm_element($elementName = null, $elementLabel = null, $attributes = null)
     {
+        $array = array(
+            'text',
+            'textarea',
+            'select',
+            'static',
+            'password',
+            //'radio',
+            //'checkbox',
+            'group'
+        );
+        if (in_array($this->getType(), $array)) {
+            if (empty($attributes)) {
+                $attributes = array('class' => 'form-control ');
+            } else {
+                if (is_array($attributes)) {
+                    $defaultClass = isset($attributes['class']) ? $attributes['class'] : null;
+                    $attributes['class'] = 'form-control '.$defaultClass;
+                }
+            }
+        }
+
         HTML_Common::HTML_Common($attributes);
         if (isset($elementName)) {
             $this->setName($elementName);
@@ -129,6 +145,7 @@ class HTML_QuickForm_element extends HTML_Common
     {
         return $this->_type;
     } // end func getType
+
 
     // }}}
     // {{{ setName()
@@ -238,7 +255,7 @@ class HTML_QuickForm_element extends HTML_Common
         // Modified by Ivan Tcholakov, 16-MAR-2010.
         //return ('' != $value? htmlspecialchars($value): '&nbsp;') .
         //       $this->_getPersistantData();
-        
+
         $value =  ('' != $value ? @htmlspecialchars($value, ENT_COMPAT, HTML_Common::charset()): '&nbsp;') .
                $this->_getPersistantData();
         return '<span class="freeze">'.$value.'</span>';
@@ -378,7 +395,7 @@ class HTML_QuickForm_element extends HTML_Common
         switch ($event) {
             case 'createElement':
                 $className = get_class($this);
-                              
+
                 $this->$className($arg[0], $arg[1], $arg[2], $arg[3], $arg[4]);
                 break;
             case 'addElement':
@@ -405,8 +422,6 @@ class HTML_QuickForm_element extends HTML_Common
         return true;
     } // end func onQuickFormEvent
 
-    // }}}
-    // {{{ accept()
 
    /**
     * Accepts a renderer
@@ -420,10 +435,7 @@ class HTML_QuickForm_element extends HTML_Common
     function accept(&$renderer, $required=false, $error=null)
     {
         $renderer->renderElement($this, $required, $error);
-    } // end func accept
-
-    // }}}
-    // {{{ _generateId()
+    }
 
    /**
     * Automatically generates and assigns an 'id' attribute for the element.
@@ -441,10 +453,7 @@ class HTML_QuickForm_element extends HTML_Common
         if (!$this->getAttribute('id')) {
             $this->updateAttributes(array('id' => 'qf_' . substr(md5(microtime() . $idx++), 0, 6)));
         }
-    } // end func _generateId
-
-    // }}}
-    // {{{ exportValue()
+    }
 
    /**
     * Returns a 'safe' element's value
@@ -463,8 +472,6 @@ class HTML_QuickForm_element extends HTML_Common
         return $this->_prepareValue($value, $assoc);
     }
 
-    // }}}
-    // {{{ _prepareValue()
 
    /**
     * Used by exportValue() to prepare the value for returning
@@ -495,7 +502,4 @@ class HTML_QuickForm_element extends HTML_Common
             }
         }
     }
-
-    // }}}
-} // end class HTML_QuickForm_element
-?>
+}

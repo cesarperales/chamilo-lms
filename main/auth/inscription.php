@@ -7,28 +7,27 @@
  */
 
 use \ChamiloSession as Session;
+use Symfony\Component\EventDispatcher\EventDispatcher,
+    Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken,
+    Symfony\Component\Security\Http\Event\InteractiveLoginEvent;
 
 $language_file = array('registration', 'admin');
 
 if (!empty($_POST['language'])) { //quick hack to adapt the registration form result to the selected registration language
     $_GET['language'] = $_POST['language'];
 }
-require_once '../inc/global.inc.php';
-require_once api_get_path(CONFIGURATION_PATH).'profile.conf.php';
-require_once api_get_path(LIBRARY_PATH).'mail.lib.inc.php';
-
-$htmlHeadXtra[] = api_get_password_checker_js('#username', '#pass1');
 
 if (api_get_setting('allow_registration') === 'false') {
     api_not_allowed(true,get_lang('RegistrationDisabled'));
 }
 
+$htmlHeadXtra[] = api_get_password_checker_js('#username', '#pass1');
 if (!empty($_SESSION['user_language_choice'])) {
     $user_selected_language = $_SESSION['user_language_choice'];
 } elseif (!empty($_SESSION['_user']['language'])) {
     $user_selected_language = $_SESSION['_user']['language'];
 } else {
-    $user_selected_language = get_setting('platformLanguage');
+    $user_selected_language = api_get_setting('platformLanguage');
 }
 
 $form = new FormValidator('registration');
@@ -53,10 +52,10 @@ if ($user_already_registered_show_terms == false) {
     if (api_is_western_name_order()) {
         //	FIRST NAME and LAST NAME
         $form->addElement('text', 'firstname', get_lang('FirstName'), array('size' => 40));
-        $form->addElement('text', 'lastname', get_lang('LastName'), array('size' => 40));
+        $form->addElement('text', 'lastname',  get_lang('LastName'),  array('size' => 40));
     } else {
         //	LAST NAME and FIRST NAME
-        $form->addElement('text', 'lastname', get_lang('LastName'), array('size' => 40));
+        $form->addElement('text', 'lastname',  get_lang('LastName'),  array('size' => 40));
         $form->addElement('text', 'firstname', get_lang('FirstName'), array('size' => 40));
     }
     $form->applyFilter(array('lastname', 'firstname'), 'trim');
@@ -70,7 +69,7 @@ if ($user_already_registered_show_terms == false) {
     }
 
     if (api_get_setting('login_is_email') == 'true') {
-        $form->applyFilter('email', 'trim');
+        $form->applyFilter('email','trim');
         if (api_get_setting('registration', 'email') != 'true') {
             $form->addRule('email', get_lang('ThisFieldIsRequired'), 'required');
         }
@@ -82,17 +81,16 @@ if ($user_already_registered_show_terms == false) {
     if (api_get_setting('openid_authentication') == 'true') {
         $form->addElement('text', 'openid', get_lang('OpenIDURL'), array('size' => 40));
     }
-    // Enabled by Ivan Tcholakov, 06-APR-2009. CONFVAL_ASK_FOR_OFFICIAL_CODE = false by default.
-    //	OFFICIAL CODE
-    if (CONFVAL_ASK_FOR_OFFICIAL_CODE) {
-        $form->addElement('text', 'official_code', get_lang('OfficialCode'), array('size' => 40));
-        if (api_get_setting('registration', 'officialcode') == 'true')
-            $form->addRule('official_code', get_lang('ThisFieldIsRequired'), 'required');
+
+    $form->addElement('text', 'official_code', get_lang('OfficialCode'), array('size' => 40));
+    if (api_get_setting('registration', 'officialcode') == 'true') {
+        $form->addRule('official_code', get_lang('ThisFieldIsRequired'), 'required');
     }
+
 
     //	USERNAME
     if (api_get_setting('login_is_email') != 'true') {
-        $form->addElement('text', 'username', get_lang('UserName'), array('id' => 'username', 'size' => USERNAME_MAX_LENGTH));
+        $form->addElement('text', 'username', get_lang('UserName'), array('size' => USERNAME_MAX_LENGTH));
         $form->applyFilter('username','trim');
         $form->addRule('username', get_lang('ThisFieldIsRequired'), 'required');
         $form->addRule('username', sprintf(get_lang('UsernameMaxXCharacters'), (string)USERNAME_MAX_LENGTH), 'maxlength', USERNAME_MAX_LENGTH);
@@ -101,7 +99,8 @@ if ($user_already_registered_show_terms == false) {
     }
 
     //	PASSWORD
-    $form->addElement('password', 'pass1', get_lang('Pass'), array('id' => 'pass1', 'size' => 20, 'autocomplete' => 'off'));
+    $form->addElement('password', 'pass1', get_lang('Password'), array('id' => 'pass1', 'size' => 20, 'autocomplete' => 'off'));
+    global $_configuration;
 
     if (isset($_configuration['allow_strength_pass_checker']) && $_configuration['allow_strength_pass_checker']) {
         $form->addElement('label', null, '<div id="password_progress"></div>');
@@ -117,15 +116,9 @@ if ($user_already_registered_show_terms == false) {
 
     //	PHONE
     $form->addElement('text', 'phone', get_lang('Phone'), array('size' => 20));
-    if (api_get_setting('registration', 'phone') == 'true')
+    if (api_get_setting('registration', 'phone') == 'true') {
         $form->addRule('phone', get_lang('ThisFieldIsRequired'), 'required');
-
-    // PICTURE
-    /*if (api_get_setting('profile', 'picture') == 'true') {
-        $form->addElement('file', 'picture', get_lang('AddPicture'));
-        $allowed_picture_types = array ('jpg', 'jpeg', 'png', 'gif');
-        $form->addRule('picture', get_lang('OnlyImagesAllowed').' ('.implode(',', $allowed_picture_types).')', 'filetype', $allowed_picture_types);
-    }*/
+    }
 
     //	LANGUAGE
     if (api_get_setting('registration', 'language') == 'true') {
@@ -166,7 +159,8 @@ if ($user_already_registered_show_terms == false) {
     }
     // EXTRA FIELDS
     $extra_data = UserManager::get_extra_user_data(api_get_user_id(), true);
-    UserManager::set_extra_fields_in_form($form, $extra_data, 'registration');
+    $extraField = new ExtraField('user');
+    $extraField->set_extra_fields_in_form($form, $extra_data, 'registration', false, null);
 }
 
 if (isset($_SESSION['user_language_choice']) && $_SESSION['user_language_choice'] != '') {
@@ -227,7 +221,7 @@ if (!CustomPages::enabled()) {
         }
     }
 
-    $tool_name = get_lang('Registration', null, (!empty($_POST['language'])?$_POST['language']:$_user['language']));
+    $tool_name = get_lang('Registration');
 
     if (api_get_setting('allow_terms_conditions') == 'true' && $user_already_registered_show_terms) {
         $tool_name = get_lang('TermsAndConditions');
@@ -239,7 +233,7 @@ if (!CustomPages::enabled()) {
         if ($access_url_id != -1) {
             $url_info = api_get_access_url($access_url_id);
             $url = api_remove_trailing_slash(preg_replace('/https?:\/\//i', '', $url_info['url']));
-            $clean_url = replace_dangerous_char($url);
+            $clean_url = api_replace_dangerous_char($url);
             $clean_url = str_replace('/', '-', $clean_url);
             $clean_url .= '/';
             $home_old  = api_get_path(SYS_PATH).'home/';
@@ -328,13 +322,31 @@ if ($form->validate()) {
         Session::write('is_platformAdmin', $is_admin);
     } else {
         // Creates a new user
-        $user_id = UserManager::create_user($values['firstname'], $values['lastname'], $values['status'], $values['email'], $values['username'], $values['pass1'], $values['official_code'], $values['language'], $values['phone'], $picture_uri, PLATFORM_AUTH_SOURCE, null, 1, 0, null, null, true);
+        $user_id = UserManager::create_user(
+            $values['firstname'],
+            $values['lastname'],
+            $values['status'],
+            $values['email'],
+            $values['username'],
+            $values['pass1'],
+            $values['official_code'],
+            $values['language'],
+            $values['phone'],
+            null,
+            PLATFORM_AUTH_SOURCE,
+            null,
+            1,
+            0,
+            null,
+            null,
+            true
+        );
 
         // Register extra fields
         $extras = array();
         foreach ($values as $key => $value) {
             if (substr($key, 0, 6) == 'extra_') { //an extra field
-                $extras[substr($key,6)] = $value;
+                $extras[substr($key, 6)] = $value;
             }
         }
 
@@ -389,19 +401,19 @@ if ($form->validate()) {
 
                 $emailsubject	 = get_lang('ApprovalForNewAccount',null,$values['language']).': '.$values['username'];
                 $emailbody		 = get_lang('ApprovalForNewAccount',null,$values['language'])."\n";
-                $emailbody		.= get_lang('UserName',null,$values['language']).': '.$values['username']."\n";
+                $emailbody		.= get_lang('UserName',null, $values['language']).': '.$values['username']."\n";
 
                 if (api_is_western_name_order()) {
-                    $emailbody	.= get_lang('FirstName',null,$values['language']).': '.$values['firstname']."\n";
-                    $emailbody	.= get_lang('LastName',null,$values['language']).': '.$values['lastname']."\n";
+                    $emailbody	.= get_lang('FirstName',null, $values['language']).': '.$values['firstname']."\n";
+                    $emailbody	.= get_lang('LastName',null, $values['language']).': '.$values['lastname']."\n";
                 } else {
-                    $emailbody	.= get_lang('LastName',null,$values['language']).': '.$values['lastname']."\n";
-                    $emailbody	.= get_lang('FirstName',null,$values['language']).': '.$values['firstname']."\n";
+                    $emailbody	.= get_lang('LastName',null, $values['language']).': '.$values['lastname']."\n";
+                    $emailbody	.= get_lang('FirstName',null, $values['language']).': '.$values['firstname']."\n";
                 }
-                $emailbody		.= get_lang('Email',null,$values['language']).': '.$values['email']."\n";
-                $emailbody		.= get_lang('Status',null,$values['language']).': '.$values['status']."\n\n";
+                $emailbody		.= get_lang('Email',null, $values['language']).': '.$values['email']."\n";
+                $emailbody		.= get_lang('Status',null, $values['language']).': '.$values['status']."\n\n";
                 $url_edit        = Display::url(api_get_path(WEB_CODE_PATH).'admin/user_edit.php?user_id='.$user_id, api_get_path(WEB_CODE_PATH).'admin/user_edit.php?user_id='.$user_id);
-                $emailbody		.= get_lang('ManageUser',null,$values['language']).": $url_edit";
+                $emailbody		.= get_lang('ManageUser',null, $values['language']).": $url_edit";
 
                 $admins = UserManager::get_all_administrators();
                 foreach ($admins as $admin_info) {
@@ -435,24 +447,19 @@ if ($form->validate()) {
         $values = api_get_user_info($user_id);
     }
 
-    /* SESSION REGISTERING */
-    /* @todo move this in a function */
-    $_user['firstName'] = stripslashes($values['firstname']);
-    $_user['lastName'] 	= stripslashes($values['lastname']);
-    $_user['mail'] 		= $values['email'];
-    $_user['language'] 	= $values['language'];
-    $_user['user_id']	= $user_id;
-    $is_allowedCreateCourse = $values['status'] == 1;
+    // Symfony way to login as a user
+    $user = $app['orm.em']->getRepository('Entity\User')->find($user_id);
 
-    Session::write('_user', $_user);
-    Session::write('is_allowedCreateCourse', $is_allowedCreateCourse);
+    // Here, "secured" is the name of the firewall in your security.yml
+    $token = new UsernamePasswordToken($user, $user->getPassword(), 'secured', $user->getRoles());
+    $app['security']->setToken($token);
+    $request = $app['request'];
 
-    //stats
-    event_login();
+    // Fire the login event
+    // Logging the user in above the way we do it doesn't do this automatically
+    $event = new InteractiveLoginEvent($request, $token);
+    $app['dispatcher']->dispatch("security.interactive_login", $event);
 
-    // last user login date is now
-    $user_last_login_datetime = 0; // used as a unix timestamp it will correspond to : 1 1 1970
-    Session::write('user_last_login_datetime', $user_last_login_datetime);
     $recipient_name = api_get_person_name($values['firstname'], $values['lastname']);
 
     $text_after_registration = '<p>'.get_lang('Dear', null, $_user['language']).' '.stripslashes(Security::remove_XSS($recipient_name)).',<br /><br />'.get_lang('PersonalSettings',null,$_user['language']).".</p>";
@@ -469,7 +476,7 @@ if ($form->validate()) {
             $text_after_registration.= '<p>'.get_lang('MailHasBeenSent',null,$_user['language']).'.</p>';
         }
 
-        if ($is_allowedCreateCourse) {
+        if (api_is_allowed_to_create_course()) {
             $form_data['message'] = '<p>'. get_lang('NowGoCreateYourCourse',null,$_user['language']). "</p>";
             $form_data['action']  = '../create_course/add_course.php';
 

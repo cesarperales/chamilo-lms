@@ -13,7 +13,9 @@
  * @uses	Database.lib.php to use the database
  * @uses	learnpath.class.php to generate learnpath objects to get in the list
  */
-class learnpathList {
+class LearnpathList
+{
+
     public $list = array(); // Holds a flat list of learnpaths data from the database.
     public $ref_list = array(); // Holds a list of references to the learnpaths objects (only filled by get_refs()).
     public $alpha_list = array(); // Holds a flat list of learnpaths sorted by alphabetical name order.
@@ -30,16 +32,16 @@ class learnpathList {
      * @param	int			Optional session id (otherwise we use api_get_session_id())
      * @return	void
      */
-    function __construct($user_id, $course_code = '', $session_id = null, $order_by = null, $check_publication_dates = false) {
+    function __construct($user_id, $course_code = null, $session_id = null, $order_by = null, $check_publication_dates = false, $filter_by_category = null) {
         $course_info = api_get_course_info($course_code);
         $lp_table = Database::get_course_table(TABLE_LP_MAIN);
         $tbl_tool = Database::get_course_table(TABLE_TOOL_LIST);
-                
-        $this->course_code = $course_code;        
+
+        $this->course_code = $course_code;
         $this->user_id = $user_id;
-        
+
         $course_id = $course_info['real_id'];
-        
+
         if (empty($course_id)) {
             return false;
         }
@@ -53,32 +55,39 @@ class learnpathList {
         $condition_session = api_get_session_condition($session_id, true, true);
         $order = "ORDER BY display_order ASC, name ASC";
         if (isset($order_by)) {
-           $order = Database::parse_conditions(array('order'=>$order_by));           
+           $order = Database::parse_conditions(array('order'=>$order_by));
         }
         $now = api_get_utc_datetime();
         $time_conditions = '';
-        
+
         if ($check_publication_dates) {
-            $time_conditions = " AND ( (publicated_on <> '0000-00-00 00:00:00' AND publicated_on < '$now'  AND expired_on <> '0000-00-00 00:00:00'  AND expired_on > '$now' )  OR 
-                        (publicated_on <> '0000-00-00 00:00:00'  AND publicated_on < '$now'  AND expired_on = '0000-00-00 00:00:00') OR
-                        (publicated_on = '0000-00-00 00:00:00'   AND expired_on <> '0000-00-00 00:00:00' AND expired_on > '$now') OR                        
-                        (publicated_on = '0000-00-00 00:00:00'   AND expired_on = '0000-00-00 00:00:00' )) 
-            ";
+            $time_conditions = " AND (
+                (publicated_on <> '0000-00-00 00:00:00' AND publicated_on < '$now'  AND expired_on <> '0000-00-00 00:00:00'  AND expired_on > '$now' )  OR
+                (publicated_on <> '0000-00-00 00:00:00'  AND publicated_on < '$now'  AND expired_on = '0000-00-00 00:00:00') OR
+                (publicated_on = '0000-00-00 00:00:00'   AND expired_on <> '0000-00-00 00:00:00' AND expired_on > '$now') OR
+                (publicated_on = '0000-00-00 00:00:00'   AND expired_on = '0000-00-00 00:00:00' )
+            )";
         }
-        
-        $sql = "SELECT * FROM $lp_table WHERE c_id = $course_id $time_conditions $condition_session $order";
-        
+
+        $category_filter = null;
+        if (isset($filter_by_category)) {
+            $filter_by_category = intval($filter_by_category);
+            $category_filter = " AND category_id = $filter_by_category";
+        }
+
+        $sql = "SELECT * FROM $lp_table WHERE c_id = $course_id $time_conditions $condition_session $category_filter $order";
+
         $res = Database::query($sql);
         $names = array();
         while ($row = Database::fetch_array($res,'ASSOC')) {
             // Check if published.
-            $pub = '';            
+            $pub = '';
             // Use domesticate here instead of Database::escape_string because
             // it prevents ' to be slashed and the input (done by learnpath.class.php::toggle_visibility())
             // is done using domesticate()
-            $myname = domesticate($row['name']);
+            $myname = Text::domesticate($row['name']);
             $mylink = 'newscorm/lp_controller.php?action=view&lp_id='.$row['id'].'&id_session='.$session_id;
-            $sql2="SELECT * FROM $tbl_tool WHERE c_id = $course_id AND (name='$myname' and image='scormbuilder.gif' and link LIKE '$mylink%')";
+            $sql2 = "SELECT * FROM $tbl_tool WHERE c_id = $course_id AND (name='$myname' and image='scormbuilder.gif' and link LIKE '$mylink%')";
             //error_log('New LP - learnpathList::__construct - getting visibility - '.$sql2, 0);
             $res2 = Database::query($sql2);
             if (Database::num_rows($res2) > 0) {
@@ -87,9 +96,10 @@ class learnpathList {
             } else {
                 $pub = 'i';
             }
-            // Check if visible.
+
+            // Check if visible
             $vis = api_get_item_visibility(api_get_course_info($course_code), 'learnpath', $row['id'], $session_id);
-            
+
             if (!empty($row['created_on']) && $row['created_on'] != '0000-00-00 00:00:00') {
             	$row['created_on'] = $row['created_on'];
             } else {
@@ -100,18 +110,19 @@ class learnpathList {
             } else {
                 $row['modified_on'] = '';
             }
-            
+
             if (!empty($row['publicated_on']) && $row['publicated_on'] != '0000-00-00 00:00:00') {
                 $row['publicated_on'] = $row['publicated_on'];
             } else {
                 $row['publicated_on'] = '';
             }
-            
+
             if (!empty($row['expired_on']) && $row['expired_on'] != '0000-00-00 00:00:00') {
                 $row['expired_on'] = $row['expired_on'];
             } else {
                 $row['expired_on'] = '';
             }
+            //@todo user LP object
             $this->list[$row['id']] = array(
                 'lp_type'           => $row['lp_type'],
                 'lp_session'        => $row['session_id'],
@@ -127,7 +138,7 @@ class learnpathList {
                 'lp_visibility'     => $vis,
                 'lp_published'	    => $pub,
                 'lp_prevent_reinit' => $row['prevent_reinit'],
-          			'seriousgame_mode' => $row['seriousgame_mode'],
+                'seriousgame_mode'  => $row['seriousgame_mode'],
                 'lp_scorm_debug'    => $row['debug'],
                 'lp_display_order'  => $row['display_order'],
                 'lp_preview_image'  => stripslashes($row['preview_image']),
@@ -136,11 +147,13 @@ class learnpathList {
                 'created_on'        => $row['created_on'],
                 'modified_on'       => $row['modified_on'],
                 'publicated_on'     => $row['publicated_on'],
-                'expired_on'        => $row['expired_on']
-                );
+                'expired_on'        => $row['expired_on'],
+                'category_id'       => $row['category_id'],
+                'subscribe_users'   => $row['subscribe_users']
+            );
             $names[$row['name']] = $row['id'];
-           }
-           $this->alpha_list = asort($names);
+        }
+        $this->alpha_list = asort($names);
     }
 
     /**

@@ -130,6 +130,7 @@ class CourseBuilder
             $function_build = 'build_'.$tool;
             $specificIdList = isset($this->specific_id_list[$tool]) ? $this->specific_id_list[$tool] : null;
             $this->$function_build($session_id, $course_code, $with_base_content, $specificIdList);
+
         }
 
         //TABLE_LINKED_RESOURCES is the "resource" course table, which is deprecated, apparently
@@ -436,9 +437,13 @@ class CourseBuilder
                 $doc = Database::fetch_object($res);
                 $obj->sound = $doc->id;
             }
+            $exercise_obj = new Exercise($course_id);
+            $exercise_obj->read($obj->iid);
+            $categories = $exercise_obj->get_categories_with_name_in_exercise();
+            $obj->categories = $categories;
             $quiz = new Quiz($obj);
 
-            $sql = 'SELECT * FROM '.$table_rel.' WHERE c_id = '.$course_id.' AND exercice_id = '.$obj->id;
+			$sql = 'SELECT * FROM '.$table_rel.' WHERE c_id = '.$course_id.' AND exercice_id = '.$obj->iid;
             $db_result2 = Database::query($sql);
             while ($obj2 = Database::fetch_object($db_result2)) {
                 $quiz->add_question($obj2->question_id, $obj2->question_order);
@@ -468,22 +473,23 @@ class CourseBuilder
 
         // Building normal tests.
         $sql = "SELECT * FROM $table_que WHERE c_id = $course_id ";
-
         $db_result = Database::query($sql);
-        while ($obj = Database::fetch_object($db_result)) {
-            // find the question category
-            // @todo : need to be adapted for multi category questions in 1.10
-            $question_category_id = Testcategory::getCategoryForQuestion($obj->id, $course_id);
-            // build the backup ressource question object
-            $question = new QuizQuestion($obj->id, $obj->question, $obj->description, $obj->ponderation, $obj->type, $obj->position, $obj->picture, $obj->level, $obj->extra, $question_category_id);
-            $sql = 'SELECT * FROM '.$table_ans.' WHERE c_id = '.$course_id.' AND question_id = '.$obj->id;
-            $db_result2 = Database::query($sql);
+		while ($obj = Database::fetch_object($db_result)) {
+            $categories = Testcategory::getCategoryForQuestionWithCategoryData($obj->iid, $course_id, true);
 
+            $parent_info = array();
+            if (isset($obj->parent_id) && !empty($obj->parent_id)) {
+                $parent_info = (array)Question::read($obj->parent_id, $course_id);
+            }
+
+			$question = new QuizQuestion($obj->iid, $obj->question, $obj->description, $obj->ponderation, $obj->type, $obj->position, $obj->picture, $obj->level, $obj->extra, $parent_info, $categories);
+			$sql = 'SELECT * FROM '.$table_ans.' WHERE question_id = '.$obj->iid;
+            $db_result2 = Database::query($sql);
             while ($obj2 = Database::fetch_object($db_result2)) {
-                $question->add_answer($obj2->id, $obj2->answer, $obj2->correct, $obj2->comment, $obj2->ponderation, $obj2->position, $obj2->hotspot_coordinates, $obj2->hotspot_type);
+				$question->add_answer($obj2->iid, $obj2->answer, $obj2->correct, $obj2->comment, $obj2->ponderation, $obj2->position, $obj2->hotspot_coordinates, $obj2->hotspot_type);
                 if ($obj->type == MULTIPLE_ANSWER_TRUE_FALSE) {
                     $table_options	= Database::get_course_table(TABLE_QUIZ_QUESTION_OPTION);
-                    $sql = 'SELECT * FROM '.$table_options.' WHERE c_id = '.$course_id.' AND question_id = '.$obj->id;
+                    $sql = 'SELECT * FROM '.$table_options.' WHERE c_id = '.$course_id.' AND question_id = '.$obj->iid;
                     $db_result3 = Database::query($sql);
                     while ($obj3 = Database::fetch_object($db_result3)) {
                         $question_option = new QuizQuestionOption($obj3);
@@ -495,58 +501,54 @@ class CourseBuilder
         }
 
         // Building a fictional test for collecting orphan questions.
-        $build_orphan_questions = !empty($_POST['recycle_option']); // When a course is emptied this option should be activated (true).
+        $build_orphan_questions = !empty($_POST['recycle_option']); // When a course is emptied this option should be activated (true).      
 
         // 1st union gets the orphan questions from deleted exercises
         // 2nd union gets the orphan questions from question that were deleted in a exercise.
 
         $sql = " (
-                    SELECT question_id, q.* FROM $table_que q INNER JOIN $table_rel r
-                    ON (q.c_id = r.c_id AND q.id = r.question_id)
+                    SELECT q.* FROM $table_que q INNER JOIN $table_rel r
+                    ON (q.c_id = r.c_id AND q.iid = r.question_id)
                     INNER JOIN $table_qui ex
-                    ON (ex.id = r.exercice_id AND ex.c_id = r.c_id )
+                    ON (ex.iid = r.exercice_id AND ex.c_id = r.c_id )
                     WHERE ex.c_id = $course_id AND ex.active = '-1'
                  )
                  UNION
                  (
-                    SELECT question_id, q.* FROM $table_que q left
+                    SELECT q.* FROM $table_que q left
                     OUTER JOIN $table_rel r
-                    ON (q.c_id = r.c_id AND q.id = r.question_id)
+                    ON (q.c_id = r.c_id AND q.iid = r.question_id)
                     WHERE q.c_id = $course_id AND r.question_id is null
                  )
                  UNION
                  (
-                    SELECT question_id, q.* FROM $table_que q
+                    SELECT q.* FROM $table_que q
                     INNER JOIN $table_rel r
-                    ON (q.c_id = r.c_id AND q.id = r.question_id)
+                    ON (q.c_id = r.c_id AND q.iid = r.question_id)
                     WHERE r.c_id = $course_id AND (r.exercice_id = '-1' OR r.exercice_id = '0')
                  )
         ";
-
         $db_result = Database::query($sql);
         if (Database::num_rows($db_result) > 0) {
             $build_orphan_questions = true;
             $orphanQuestionIds = array();
             while ($obj = Database::fetch_object($db_result)) {
+                $categories = Testcategory::getCategoryForQuestionWithCategoryData($obj->iid, $course_id, true);
 
-                // Orphan questions
-                if (!empty($obj->question_id)) {
-                    $obj->id = $obj->question_id;
+                $parent_info = array();
+                if (isset($obj->parent_id) && !empty($obj->parent_id)) {
+                    $parent_info = (array)Question::read($obj->parent_id, $course_id);
                 }
-
-                // Avoid adding the same question twice
-                if (!isset($this->course->resources[$obj->id])) {
-                    // find the question category
-                    // @todo : need to be adapted for multi category questions in 1.10
-                    $question_category_id = Testcategory::getCategoryForQuestion($obj->id, $course_id);
-                    $question = new QuizQuestion($obj->id, $obj->question, $obj->description, $obj->ponderation, $obj->type, $obj->position, $obj->picture,$obj->level, $obj->extra, $question_category_id);
-                    $sql = "SELECT * FROM $table_ans WHERE c_id = $course_id AND question_id = ".$obj->id;
+                //Avoid adding the same question twice
+                if (!isset($this->course->resources[$obj->iid])) {
+                    $question = new QuizQuestion($obj->iid, $obj->question, $obj->description, $obj->ponderation, $obj->type, $obj->position, $obj->picture,$obj->level, $obj->extra, $parent_info, $categories);
+                    $sql = "SELECT * FROM $table_ans WHERE c_id = $course_id AND question_id = ".$obj->iid;
                     $db_result2 = Database::query($sql);
                     if (Database::num_rows($db_result2)) {
                         while ($obj2 = Database::fetch_object($db_result2)) {
-                            $question->add_answer($obj2->id, $obj2->answer, $obj2->correct, $obj2->comment, $obj2->ponderation, $obj2->position, $obj2->hotspot_coordinates, $obj2->hotspot_type);
+                            $question->add_answer($obj2->iid, $obj2->answer, $obj2->correct, $obj2->comment, $obj2->ponderation, $obj2->position, $obj2->hotspot_coordinates, $obj2->hotspot_type);
                         }
-                        $orphanQuestionIds[] = $obj->id;
+                        $orphanQuestionIds[] = $obj->iid;
                     }
                     $this->course->add_resource($question);
                 }
@@ -555,7 +557,7 @@ class CourseBuilder
 
         if ($build_orphan_questions) {
             $obj = array(
-                'id' => -1,
+                'iid' => -1,
                 'title' => get_lang('OrphanQuestions', ''),
                 'type' => 2
             );
@@ -573,7 +575,7 @@ class CourseBuilder
     /**
      * Build the orphan questions
      */
-    function build_quiz_orphan_questions()
+	function build_quiz_orphan_questions()
     {
         $table_qui = Database :: get_course_table(TABLE_QUIZ_TEST);
         $table_rel = Database :: get_course_table(TABLE_QUIZ_TEST_QUESTION);
@@ -595,14 +597,15 @@ class CourseBuilder
                         exercices.active = -1)';
         $db_result = Database::query($sql);
         if (Database::num_rows($db_result) > 0) {
-            $orphan_questions = new Quiz(-1, get_lang('OrphanQuestions', ''), '', 0, 0, 1, '', 0); // Tjis is the fictional test for collecting orphan questions.
+            // This is the fictional test for collecting orphan questions.
+			$orphan_questions = new Quiz(-1, get_lang('OrphanQuestions', ''), '', 0, 0, 1, '', 0);
             $this->course->add_resource($orphan_questions);
-            while ($obj = Database::fetch_object($db_result)) {
-                $question = new QuizQuestion($obj->id, $obj->question, $obj->description, $obj->ponderation, $obj->type, $obj->position, $obj->picture,$obj->level,$obj->extra);
-                $sql = 'SELECT * FROM '.$table_ans.' WHERE question_id = '.$obj->id;
+			while ($obj = Database::fetch_object($db_result)) {
+				$question = new QuizQuestion($obj->iid, $obj->question, $obj->description, $obj->ponderation, $obj->type, $obj->position, $obj->picture,$obj->level,$obj->extra);
+				$sql = 'SELECT * FROM '.$table_ans.' WHERE question_id = '.$obj->iid;
                 $db_result2 = Database::query($sql);
-                while ($obj2 = Database::fetch_object($db_result2)) {
-                    $question->add_answer($obj2->id, $obj2->answer, $obj2->correct, $obj2->comment, $obj2->ponderation, $obj2->position, $obj2->hotspot_coordinates, $obj2->hotspot_type);
+				while ($obj2 = Database::fetch_object($db_result2)) {
+					$question->add_answer($obj2->iid, $obj2->answer, $obj2->correct, $obj2->comment, $obj2->ponderation, $obj2->position, $obj2->hotspot_coordinates, $obj2->hotspot_type);
                 }
                 $this->course->add_resource($question);
             }
@@ -855,6 +858,7 @@ class CourseBuilder
                                 $obj->publicated_on,
                                 $obj->expired_on,
                                 $obj->session_id,
+                                $obj->subscribe_users,
                                 $items);
             $this->course->add_resource($lp);
         }
@@ -915,7 +919,7 @@ class CourseBuilder
     function build_session_course(){
         $tbl_session = Database::get_main_table(TABLE_MAIN_SESSION);
         $tbl_session_course = Database::get_main_table(TABLE_MAIN_SESSION_COURSE);
-        $list_course = Database::get_course_list();
+		$list_course = CourseManager::get_course_list();
         $list = array();
         foreach($list_course as $_course) {
             $this->course = new Course();
@@ -924,10 +928,11 @@ class CourseBuilder
             $this->course->path = api_get_path(SYS_COURSE_PATH).$_course['directory'].'/';
             $this->course->backup_path = api_get_path(SYS_COURSE_PATH).$_course['directory'];
             $this->course->encoding = api_get_system_encoding(); //current platform encoding
-            $code_course = $_course['code'];
-            $sql_session = "SELECT id, name, course_code  FROM $tbl_session_course
-                INNER JOIN  $tbl_session ON id_session = id
-                WHERE course_code = '$code_course' ";
+			//$code_course = $_course['code'];
+            $courseId = $_course['real_id'];
+			$sql_session = "SELECT id, name, c_id
+                FROM $tbl_session_course INNER JOIN  $tbl_session ON id_session = id
+				WHERE c_id = '$courseId' ";
             $query_session = Database::query($sql_session);
             while ($rows_session = Database::fetch_assoc($query_session)) {
                 $session = new CourseSession($rows_session['id'], $rows_session['name']);
@@ -966,7 +971,8 @@ class CourseBuilder
     /**
     * Build the Surveys
     */
-    function build_thematic($session_id = 0, $course_code = '', $with_base_content = false, $id_list = array()) {
+	function build_thematic($session_id = 0, $course_code = '', $with_base_content = false, $id_list = array())
+    {
         $table_thematic            = Database :: get_course_table(TABLE_THEMATIC);
         $table_thematic_advance = Database :: get_course_table(TABLE_THEMATIC_ADVANCE);
         $table_thematic_plan    = Database :: get_course_table(TABLE_THEMATIC_PLAN);
@@ -979,11 +985,12 @@ class CourseBuilder
         }
 
         $course_id = api_get_course_int_id();
+        $courseInfo = api_get_course_info();
 
         $sql = "SELECT * FROM $table_thematic WHERE c_id = $course_id $session_condition ";
         $db_result = Database::query($sql);
         while ($row = Database::fetch_array($db_result,'ASSOC')) {
-            $thematic = new Thematic($row);
+			$thematic = new Thematic($courseInfo);
             $sql = 'SELECT * FROM '.$table_thematic_advance.' WHERE c_id = '.$course_id.' AND thematic_id = '.$row['id'];
 
             $result = Database::query($sql);
@@ -1033,7 +1040,7 @@ class CourseBuilder
         $sql = 'SELECT * FROM '.$table_attendance.' WHERE c_id = '.$course_id.' AND session_id = 0 ';
         $db_result = Database::query($sql);
         while ($row = Database::fetch_array($db_result,'ASSOC')) {
-            $obj = new Attendance($row);
+			$obj = new CourseCopyAttendance($row);
             $sql = 'SELECT * FROM '.$table_attendance_calendar.' WHERE c_id = '.$course_id.' AND attendance_id = '.$row['id'];
 
             $result = Database::query($sql);
@@ -1043,10 +1050,12 @@ class CourseBuilder
             $this->course->add_resource($obj);
         }
     }
+
     /**
      * Build the works (or "student publications", or "assignments")
      */
-    function build_works($session_id = 0, $course_code = '', $with_base_content = false, $id_list = array()) {
+    function build_works($session_id = 0, $course_code = '', $with_base_content = false, $id_list = array()) 
+    {
         $table_work            = Database :: get_course_table(TABLE_STUDENT_PUBLICATION);
         //$table_work_assignment  = Database :: get_course_table(TABLE_STUDENT_PUBLICATION_ASSIGNMENT);
 

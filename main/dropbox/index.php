@@ -367,7 +367,7 @@ if ($action != 'add') {
 				$dropbox_file_data[] = $link_open.build_document_icon_tag('file', $dropbox_file->title).'</a>';
 				$dropbox_file_data[] = '<a href="dropbox_download.php?'.api_get_cidreq().'&id='.$dropbox_file->id.'&amp;action=download">'.Display::return_icon('save.png', get_lang('Download'), array('style' => 'float:right;'),ICON_SIZE_SMALL).'</a>'.$link_open.$dropbox_file->title.'</a>'.$new_icon.'<br />'.$dropbox_file->description;
 				$file_size = $dropbox_file->filesize;
-				$dropbox_file_data[] = format_file_size($file_size);
+				$dropbox_file_data[] = Text::format_file_size($file_size);
 				$dropbox_file_data[] = $dropbox_file->author;
 				//$dropbox_file_data[] = $dropbox_file->description;
 
@@ -509,7 +509,7 @@ if ($action != 'add') {
 				$dropbox_file_data[] = $link_open.build_document_icon_tag('file', $dropbox_file->title).'</a>';
 				$dropbox_file_data[] = '<a href="dropbox_download.php?'.api_get_cidreq().'&id='.$dropbox_file->id.'&amp;action=download">'.Display::return_icon('save.png', get_lang('Save'), array('style' => 'float:right;'),ICON_SIZE_SMALL).'</a>'.$link_open.$dropbox_file->title.'</a><br />'.$dropbox_file->description;
 				$file_size = $dropbox_file->filesize;
-				$dropbox_file_data[] = format_file_size($file_size);
+				$dropbox_file_data[] = Text::format_file_size($file_size);
                 $receivers_celldata = null;
 				foreach ($dropbox_file->recipients as $recipient) {
 					$receivers_celldata = display_user_link_work($recipient['user_id'], $recipient['name']).', '.$receivers_celldata;

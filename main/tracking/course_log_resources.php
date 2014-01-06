@@ -27,7 +27,7 @@ $from = isset($_GET['from']) ? $_GET['from'] : null;
 
 if ($from == 'myspace') {
     $from_myspace = true;
-    $this_section = "session_my_space";    
+    $this_section = "session_my_space";
 } else {
     $this_section = SECTION_COURSES;
 }
@@ -35,8 +35,8 @@ if ($from == 'myspace') {
 // Access restrictions.
 $is_allowedToTrack = api_is_platform_admin() || api_is_allowed_to_create_course() || api_is_session_admin() || api_is_drh() || api_is_course_tutor();
 
-if (!$is_allowedToTrack) {    
-    api_not_allowed();    
+if (!$is_allowedToTrack) {
+    api_not_allowed();
     exit;
 }
 
@@ -44,14 +44,11 @@ if (!$is_allowedToTrack) {
 
 require_once api_get_path(SYS_CODE_PATH).'newscorm/learnpath.class.php';
 require_once api_get_path(SYS_CODE_PATH).'newscorm/learnpathItem.class.php';
-require_once api_get_path(SYS_CODE_PATH).'newscorm/learnpathList.class.php';
 require_once api_get_path(SYS_CODE_PATH).'newscorm/scorm.class.php';
 require_once api_get_path(SYS_CODE_PATH).'newscorm/scormItem.class.php';
-require_once api_get_path(LIBRARY_PATH).'export.lib.inc.php';
 require_once api_get_path(LIBRARY_PATH).'statsUtils.lib.inc.php';
 require_once api_get_path(SYS_CODE_PATH).'resourcelinker/resourcelinker.inc.php';
 require_once api_get_path(SYS_CODE_PATH).'survey/survey.lib.php';
-require_once api_get_path(SYS_CODE_PATH).'exercice/exercise.lib.php';
 
 // Starting the output buffering when we are exporting the information.
 $export_csv = isset($_GET['export']) && $_GET['export'] == 'csv' ? true : false;
@@ -66,9 +63,9 @@ if ($export_csv) {
 
 // Breadcrumbs.
 if (isset($_GET['origin']) && $_GET['origin'] == 'resume_session') {
-    $interbreadcrumb[] = array('url' => '../admin/index.php','name' => get_lang('PlatformAdmin'));
-    $interbreadcrumb[] = array('url' => '../admin/session_list.php','name' => get_lang('SessionList'));
-    $interbreadcrumb[] = array('url' => '../admin/resume_session.php?id_session='.api_get_session_id(), 'name' => get_lang('SessionOverview'));
+    $interbreadcrumb[] = array('url' => '../session/index.php','name' => get_lang('PlatformAdmin'));
+    $interbreadcrumb[] = array('url' => '../session/session_list.php','name' => get_lang('SessionList'));
+    $interbreadcrumb[] = array('url' => '../session/resume_session.php?id_session='.api_get_session_id(), 'name' => get_lang('SessionOverview'));
 }
 
 $nameTools = get_lang('Tracking');
@@ -79,7 +76,8 @@ Display::display_header($nameTools, 'Tracking');
 /* MAIN CODE */
 
 echo '<div class="actions">';
-echo Display::url(Display::return_icon('user.png', get_lang('StudentsTracking'), array(), 32), 'courseLog.php?'.api_get_cidreq());  
+echo Display::url(Display::return_icon('user.png', get_lang('StudentsTracking'), array(), 32), 'courseLog.php?'.api_get_cidreq());
+echo Display::url(Display::return_icon('group.png', get_lang('GroupReporting'), array(), 32),  'course_log_groups.php?'.api_get_cidreq(true, false));
 echo Display::url(Display::return_icon('course.png', get_lang('CourseTracking'), array(), 32), 'course_log_tools.php?'.api_get_cidreq());
 echo Display::return_icon('tools_na.png', get_lang('ResourcesTracking'), array(), 32);
 echo '<span style="float:right; padding-top:0px;">';

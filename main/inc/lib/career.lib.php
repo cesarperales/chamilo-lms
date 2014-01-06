@@ -9,19 +9,14 @@
  * Code
  */
 require_once 'promotion.lib.php';
-require_once 'fckeditor/fckeditor.php';
-
-define ('CAREER_STATUS_ACTIVE',  1);
-define ('CAREER_STATUS_INACTIVE',0);
 
 /**
  * @package chamilo.library
  */
-/**
- * Class Career
- */
 class Career extends Model
 {
+    const CAREER_STATUS_ACTIVE = 1;
+    const CAREER_STATUS_INACTIVE = 0;
     public $table;
     public $columns = array('id', 'name','description','status','created_at','updated_at');
 
@@ -39,12 +34,7 @@ class Career extends Model
         return $row['count'];
     }
 
-    /**
-     * @param array $where_conditions
-     * @return array
-     */
-    public function get_all($where_conditions = array())
-    {
+    public function get_all($where_conditions = array()) {
         return Database::select('*',$this->table, array('where'=>$where_conditions,'order' =>'name ASC'));
     }
 
@@ -53,8 +43,7 @@ class Career extends Model
      * @param   int     career id
      * @param   int     status (1 or 0)
     */
-    public function update_all_promotion_status_by_career_id($career_id, $status)
-    {
+    public function update_all_promotion_status_by_career_id($career_id, $status) {
         $promotion = new Promotion();
         $promotion_list = $promotion->get_all_promotions_by_career_id($career_id);
         if (!empty($promotion_list)) {
@@ -72,6 +61,7 @@ class Career extends Model
      */
 	public function display()
     {
+		// action links
 		echo '<div class="actions" style="margin-bottom:20px">';
         echo '<a href="career_dashboard.php">'.Display::return_icon('back.png',get_lang('Back'),'','32').'</a>';
 		echo '<a href="'.api_get_self().'?action=add">'.Display::return_icon('new_career.png',get_lang('Add'),'','32').'</a>';
@@ -79,30 +69,19 @@ class Career extends Model
         echo Display::grid_html('careers');
 	}
 
-    /**
-     * @return array
-     */
     public function get_status_list()
     {
-        return array(CAREER_STATUS_ACTIVE => get_lang('Unarchived'), CAREER_STATUS_INACTIVE => get_lang('Archived'));
+        return array(self::CAREER_STATUS_ACTIVE => get_lang('Unarchived'), self::CAREER_STATUS_INACTIVE => get_lang('Archived'));
     }
 
     /**
-    * Returns a Form validator Obj
-    * @todo the form should be auto generated
-    * @param   string  url
-    * @param   string  action add, edit
-    * @return  obj     form validator obj
-    */
+     * Returns a Form validator Obj
+     * @param   string  url
+     * @param   string  action add, edit
+     * @return  obj     form validator obj
+     */
     public function return_form($url, $action)
     {
-		$oFCKeditor = new FCKeditor('description');
-		$oFCKeditor->ToolbarSet = 'careers';
-		$oFCKeditor->Width		= '100%';
-		$oFCKeditor->Height		= '200';
-		$oFCKeditor->Value		= '';
-		$oFCKeditor->CreateHtml();
-
         $form = new FormValidator('career', 'post', $url);
         // Setting the form elements
         $header = get_lang('Add');
@@ -187,12 +166,7 @@ class Career extends Model
         return $cid;
     }
 
-    /**
-     * @param int $career_id
-     * @return bool
-     */
-    public function get_status($career_id)
-    {
+     public function get_status($career_id) {
         $TBL_CAREER             = Database::get_main_table(TABLE_CAREER);
         $career_id = intval($career_id);
         $sql 	= "SELECT status FROM $TBL_CAREER WHERE id = '$career_id'";
@@ -203,28 +177,19 @@ class Career extends Model
         } else {
             return false;
         }
+
     }
 
-    /**
-     * @param array $params
-     * @param bool $show_query
-     * @return bool
-     */
-    public function save($params, $show_query = false)
-    {
-	    $id = parent::save($params);
+
+    public function save($params, $show_query = false) {
+	    $id = parent::save($params, $show_query);
 	    if (!empty($id)) {
 	    	event_system(LOG_CAREER_CREATE, LOG_CAREER_ID, $id, api_get_utc_datetime(), api_get_user_id());
    		}
    		return $id;
     }
 
-    /**
-     * @param int $id
-     * @return bool|void
-     */
-    public function delete($id)
-    {
+    public function delete($id) {
 	    parent::delete($id);
 	    event_system(LOG_CAREER_DELETE, LOG_CAREER_ID, $id, api_get_utc_datetime(), api_get_user_id());
     }

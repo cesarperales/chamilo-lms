@@ -11,9 +11,8 @@
 $language_file = array('registration', 'messages', 'userInfo');
 $cidReset = true;
 
-require_once '../inc/global.inc.php';
-
 api_block_anonymous_users();
+
 if (isset($_GET['messages_page_nr'])) {
     $social_link = '';
     if ($_REQUEST['f'] == 'social') {
@@ -24,11 +23,11 @@ if (isset($_GET['messages_page_nr'])) {
     }
 }
 if (api_get_setting('allow_message_tool') != 'true') {
-    api_not_allowed();
+    api_not_allowed(true);
+    return;
 }
 
 $htmlHeadXtra[] = '<script>
-
 function show_icon_edit(element_html) {
 	ident="#edit_image";
 	$(ident).show();
@@ -41,6 +40,8 @@ function hide_icon_edit(element_html)  {
 
 </script>';
 
+$show_message = null;
+$actions = null;
 /*
   MAIN CODE
  */
@@ -154,7 +155,7 @@ if (!isset($_GET['del_msg'])) {
     $num_msg = intval($_POST['total']);
     for ($i = 0; $i < $num_msg; $i++) {
         if ($_POST[$i]) {
-            //the user_id was necesarry to delete a message??
+            //the user_id was necessary to delete a message??
             $show_message .= MessageManager::delete_message_by_user_receiver(api_get_user_id(), $_POST['_'.$i]);
         }
     }
@@ -165,7 +166,7 @@ if (api_get_setting('allow_social_tool') == 'true') {
     $social_right_content .= '</div>';
 }
 
-$tpl = new Template(null);
+$tpl = $app['template'];
 if (api_get_setting('allow_social_tool') == 'true') {
     $tpl->assign('social_left_content', $social_left_content);
     $tpl->assign('social_right_content', $social_right_content);

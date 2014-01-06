@@ -75,17 +75,10 @@ $check_qualification = intval($my_folder_data['qualification']);
 if (!empty($work_data['enable_qualification']) && !empty($check_qualification)) {
     $type = 'simple';
     $columns = array(
-        get_lang('Type'),
-        get_lang('FirstName'),
-        get_lang('LastName'),
-        get_lang('Title'),
-        get_lang('Qualification'),
-        get_lang('Date'),
-        get_lang('Status'),
-        get_lang('Actions')
+        get_lang('Type'), get_lang('FirstName'), get_lang('LastName'), get_lang('Title'), get_lang('Qualification'), get_lang('Date'),  get_lang('Status'), get_lang('Actions')
     );
-    $column_model = array(
-        array('name'=>'type',           'index'=>'file',            'width'=>'12',   'align'=>'left', 'search' => 'false', 'sortable' => 'false'),
+    $column_model   = array(
+        array('name'=>'type',           'index'=>'file',            'width'=>'12',   'align'=>'left', 'search' => 'false'),
         array('name'=>'firstname',      'index'=>'firstname',       'width'=>'35',   'align'=>'left', 'search' => 'true'),
         array('name'=>'lastname',		'index'=>'lastname',        'width'=>'35',   'align'=>'left', 'search' => 'true'),
         array('name'=>'title',          'index'=>'title',           'width'=>'40',   'align'=>'left', 'search' => 'false', 'wrap_cell' => 'true'),
@@ -99,8 +92,8 @@ if (!empty($work_data['enable_qualification']) && !empty($check_qualification)) 
     $columns  = array(
         get_lang('Type'), get_lang('FirstName'), get_lang('LastName'), get_lang('Title'), get_lang('Date'),  get_lang('Actions')
     );
-    $column_model = array (
-        array('name'=>'type',           'index'=>'file',            'width'=>'12',   'align'=>'left', 'search' => 'false', 'sortable' => 'false'),
+    $column_model   = array (
+        array('name'=>'type',           'index'=>'file',            'width'=>'12',   'align'=>'left', 'search' => 'false'),
         array('name'=>'firstname',      'index'=>'firstname',       'width'=>'35',   'align'=>'left', 'search' => 'true'),
         array('name'=>'lastname',		'index'=>'lastname',        'width'=>'35',   'align'=>'left', 'search' => 'true'),
         array('name'=>'title',          'index'=>'title',           'width'=>'40',   'align'=>'left', 'search' => 'false', 'wrap_cell' => "true"),

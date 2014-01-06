@@ -13,9 +13,6 @@
 /**
  * Code
  */
-define(COURSE_REQUEST_PENDING,  0);
-define(COURSE_REQUEST_ACCEPTED, 1);
-define(COURSE_REQUEST_REJECTED, 2);
 
 /**
  * Course request manager
@@ -56,7 +53,6 @@ class CourseRequestManager {
      * @return int/bool                 The database id of the newly created course request or FALSE on failure.
      */
     public static function create_course_request($wanted_code, $title, $description, $category_code, $course_language, $objetives, $target_audience, $user_id, $exemplary_content) {
-        global $_configuration;
         $wanted_code = trim($wanted_code);
         $user_id = (int)$user_id;
         $exemplary_content = (bool)$exemplary_content ? 1 : 0;
@@ -83,7 +79,7 @@ class CourseRequestManager {
         $request_date = api_get_utc_datetime();
         $status = COURSE_REQUEST_PENDING;
         $info = 0;
-        $keys = define_course_keys($wanted_code, '');
+        $keys = CourseManager::define_course_keys($wanted_code, '');
         if (!count($keys)) {
             return false;
         }
@@ -111,7 +107,7 @@ class CourseRequestManager {
         if (!$result_sql) {
             return false;
         }
-        $last_insert_id = Database::get_last_insert_id();
+        $last_insert_id = Database::insert_id();
 
         // E-mail notifications.
 
@@ -143,7 +139,7 @@ class CourseRequestManager {
         $sender_name_teacher = api_get_person_name($user_info['firstname'], $user_info['lastname'], null, PERSON_NAME_EMAIL_ADDRESS);
         $sender_email_teacher = $user_info['mail'];
         $recipient_name_admin = api_get_person_name(api_get_setting('administratorName'), api_get_setting('administratorSurname'), null, PERSON_NAME_EMAIL_ADDRESS);
-        $recipient_email_admin = get_setting('emailAdministrator');
+        $recipient_email_admin = api_get_setting('emailAdministrator');
 
         @api_mail($recipient_name_admin, $recipient_email_admin, $email_subject, $email_body_admin, $sender_name_teacher, $sender_email_teacher);
 
@@ -184,18 +180,7 @@ class CourseRequestManager {
      * @param int/string $user_id
      * @return bool                     Returns TRUE on success or FALSE on failure.
      */
-    public static function update_course_request(
-        $id,
-        $wanted_code,
-        $title,
-        $description,
-        $category_code,
-        $course_language,
-        $objetives,
-        $target_audience,
-        $user_id,
-        $exemplary_content
-    ) {
+    public static function update_course_request($id, $wanted_code, $title, $description, $category_code, $course_language, $objetives, $target_audience, $user_id, $exemplary_content) {
         $id = (int)$id;
         $wanted_code = trim($wanted_code);
         $user_id = (int)$user_id;
@@ -228,7 +213,7 @@ class CourseRequestManager {
             if (self::course_code_exists($wanted_code)) {
                 return false;
             }
-            $keys = define_course_keys($wanted_code, '');
+            $keys = CourseManager::define_course_keys($wanted_code, '');
             if (count($keys)) {
                 $visual_code = $keys['currentCourseCode'];
                 $code = $keys['currentCourseId'];
@@ -349,9 +334,7 @@ class CourseRequestManager {
      * @param int/string $id              The id (an integer number) of the corresponding database record.
      * @return string/bool                Returns the code of the newly created course or FALSE on failure.
      */
-    public static function accept_course_request($id)
-    {
-
+    public static function accept_course_request($id) {
         $id = (int)$id;
 
         // Retrieve request's data
@@ -384,7 +367,7 @@ class CourseRequestManager {
         $params['exemplary_content']    = intval($course_request_info['exemplary_content']) > 0;
         $params['wanted_code']          = $course_request_info['code'];
         $params['user_id']              = $course_request_info['user_id'];
-        $params['tutor_name']           = api_get_person_name($user_info['firstname'], $user_info['lastname']);
+        $params['tutor_name']           = api_get_person_name($user_info['firstname'], $user_info['lastname'], null, null, $course_language);
 
         $course_info = CourseManager::create_course($params);
         if (!empty($course_info)) {
@@ -411,7 +394,7 @@ class CourseRequestManager {
             $email_body .= "\n".get_lang('CourseRequestLegalNote', null, $email_language)."\n";
 
             $sender_name = api_get_person_name(api_get_setting('administratorName'), api_get_setting('administratorSurname'), null, PERSON_NAME_EMAIL_ADDRESS);
-            $sender_email = get_setting('emailAdministrator');
+            $sender_email = api_get_setting('emailAdministrator');
             $recipient_name = api_get_person_name($user_info['firstname'], $user_info['lastname'], null, PERSON_NAME_EMAIL_ADDRESS);
             $recipient_email = $user_info['mail'];
             $extra_headers = 'Bcc: '.$sender_email;
@@ -475,7 +458,7 @@ class CourseRequestManager {
         $email_body .= "\n".get_lang('CourseRequestLegalNote', null, $email_language)."\n";
 
         $sender_name = api_get_person_name(api_get_setting('administratorName'), api_get_setting('administratorSurname'), null, PERSON_NAME_EMAIL_ADDRESS);
-        $sender_email = get_setting('emailAdministrator');
+        $sender_email = api_get_setting('emailAdministrator');
         $recipient_name = api_get_person_name($user_info['firstname'], $user_info['lastname'], null, PERSON_NAME_EMAIL_ADDRESS);
         $recipient_email = $user_info['mail'];
         $extra_headers = 'Bcc: '.$sender_email;
@@ -538,7 +521,7 @@ class CourseRequestManager {
         $email_body .= "\n".get_lang('CourseRequestLegalNote', null, $email_language)."\n";
 
         $sender_name = api_get_person_name(api_get_setting('administratorName'), api_get_setting('administratorSurname'), null, PERSON_NAME_EMAIL_ADDRESS);
-        $sender_email = get_setting('emailAdministrator');
+        $sender_email = api_get_setting('emailAdministrator');
         $recipient_name = api_get_person_name($user_info['firstname'], $user_info['lastname'], null, PERSON_NAME_EMAIL_ADDRESS);
         $recipient_email = $user_info['mail'];
         $extra_headers = 'Bcc: '.$sender_email;
@@ -551,7 +534,6 @@ class CourseRequestManager {
         // Marking the fact that additional information about the request has been asked.
         $sql = "UPDATE ".Database :: get_main_table(TABLE_MAIN_COURSE_REQUEST)." SET info = 1 WHERE id = ".$id;
         $result = Database::query($sql) !== false;
-
         return $result;
     }
 
@@ -566,5 +548,4 @@ class CourseRequestManager {
         $result = Database::num_rows(Database::query($sql));
         return !empty($result);
     }
-
 }

@@ -18,21 +18,11 @@ $language_file = array('admin', 'create_course');
 
 $cidReset = true;
 
-require '../inc/global.inc.php';
+require_once '../inc/global.inc.php';
 
 $this_section = SECTION_PLATFORM_ADMIN;
 
 api_protect_admin_script();
-
-require_once api_get_path(LIBRARY_PATH).'add_course.lib.inc.php';
-require_once api_get_path(CONFIGURATION_PATH).'course_info.conf.php';
-require_once api_get_path(LIBRARY_PATH).'course_request.lib.php';
-
-// Including a configuration file.
-require api_get_path(CONFIGURATION_PATH).'add_course.conf.php';
-
-// Include additional libraries
-require_once api_get_path(LIBRARY_PATH).'fileManage.lib.php';
 
 // A check whether the course validation feature is enabled.
 $course_validation_feature = api_get_setting('course_validation') == 'true';
@@ -98,8 +88,9 @@ function get_number_of_requests() {
  * Get course data to display
  */
 function get_request_data($from, $number_of_items, $column, $direction) {
-    $keyword = Database::escape_string(trim($_GET['keyword']));
+    global $keyword;
     $course_request_table = Database :: get_main_table(TABLE_MAIN_COURSE_REQUEST);
+
     $sql = "SELECT id AS col0,
                    code AS col1,
                    title AS col2,
@@ -107,7 +98,8 @@ function get_request_data($from, $number_of_items, $column, $direction) {
                    tutor_name AS col4,
                    request_date AS col5,
                    id  AS col6
-                   FROM $course_request_table WHERE status = ".COURSE_REQUEST_ACCEPTED;
+                   FROM $course_request_table
+           WHERE status = ".COURSE_REQUEST_ACCEPTED;
 
     if ($keyword != '') {
         $sql .= " AND (title LIKE '%".$keyword."%' OR code LIKE '%".$keyword."%' OR visual_code LIKE '%".$keyword."%')";
@@ -131,7 +123,7 @@ function get_request_data($from, $number_of_items, $column, $direction) {
 function modify_filter($id) {
     $code = CourseRequestManager::get_course_request_code($id);
     $result = '<a href="course_request_edit.php?id='.$id.'&caller=1">'.Display::return_icon('edit.gif', get_lang('Edit'), array('style' => 'vertical-align: middle;')).'</a>'.
-        '&nbsp;<a href="?delete_course_request='.$id.'">'.Display::return_icon('delete.gif', get_lang('DeleteThisCourseRequest'), array('style' => 'vertical-align: middle;', 'onclick' => 'javascript: if (!confirm(\''.addslashes(api_htmlentities(sprintf(get_lang('ACourseRequestWillBeDeleted'), $code), ENT_QUOTES)).'\')) return false;')).'</a>';
+        '&nbsp;<a href="?delete_course_request='.$id.'">'.Display::return_icon('delete.gif', get_lang('DeleteThisCourseRequest'), array('style' => 'vertical-align: middle;', 'onclick' => 'javascript: if (!confirm(\''.addslashes(sprintf(get_lang('ACourseRequestWillBeDeleted'), $code)).'\')) return false;')).'</a>';
     return $result;
 }
 

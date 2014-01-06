@@ -17,7 +17,18 @@ $use_anonymous = true;
 // Name of the language file that needs to be included
 $language_file[] = 'learnpath';
 
-require_once 'back_compat.inc.php';
+require_once '../inc/global.inc.php';
+
+$app['template.show_footer'] = false;
+$app['template.show_header'] = false;
+$app['default_layout'] = 'default/layout/blank.tpl';
+
+require_once 'learnpath.class.php';
+require_once 'scorm.class.php';
+require_once 'aicc.class.php';
+require_once 'learnpathItem.class.php';
+require_once 'scormItem.class.php';
+require_once 'aiccItem.class.php';
 
 /**
  * Get one item's details
@@ -29,28 +40,20 @@ require_once 'back_compat.inc.php';
  */
 function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_item)
 {
-    $debug  = 0;
+    $debug = 0;
     $return = '';
     if ($debug > 0) {
-        error_log(
-            'In xajax_switch_item_details('.$lp_id.','.$user_id.','.$view_id.','.$current_item.','.$next_item.')',
-            0
-        );
+        error_log('In xajax_switch_item_details('.$lp_id.','.$user_id.','.$view_id.','.$current_item.','.$next_item.')', 0);
     }
     //$objResponse = new xajaxResponse();
-    /*$item_id may be one of:
+    /* $item_id may be one of:
      * -'next'
      * -'previous'
      * -'first'
      * -'last'
      * - a real item ID
      */
-    require_once 'learnpath.class.php';
-    require_once 'scorm.class.php';
-    require_once 'aicc.class.php';
-    require_once 'learnpathItem.class.php';
-    require_once 'scormItem.class.php';
-    require_once 'aiccItem.class.php';
+
     $mylp = '';
     if (isset($_SESSION['lpobject'])) {
         if ($debug > 1) {
@@ -73,7 +76,14 @@ function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_it
             }
             $mylp = $oLP;
         }
+    } else {
+        if ($debug > 1) {
+            error_log('$_SESSION[lpobject] is NOT set', 0);
+        }
     }
+
+    $check_attempts = $mylp->check_item_attempts($next_item);
+
     $new_item_id = 0;
     switch ($next_item) {
         case 'next':
@@ -115,11 +125,14 @@ function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_it
             }
             break;
     }
-    $mylp->start_current_item(true);
-    if ($mylp->force_commit) {
+
+    if ($check_attempts) {
+        $mylp->start_current_item(true);
+    }
+    if ($check_attempts == true && $mylp->force_commit) {
         $mylp->save_current();
     }
-    //$objResponse->addAlert(api_get_path(REL_CODE_PATH).'newscorm/learnpathItem.class.php');
+
     if (is_object($mylp->items[$new_item_id])) {
         $mylpi = $mylp->items[$new_item_id];
     } else {
@@ -129,6 +142,7 @@ function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_it
         $mylpi = new learnpathItem($new_item_id, $user_id);
         $mylpi->set_lp_view($view_id);
     }
+
     /*
      * now get what's needed by the SCORM API:
      * -score
@@ -139,30 +153,21 @@ function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_it
      * -suspend_data
      */
     $myscore = $mylpi->get_score();
-    $mymax   = $mylpi->get_max();
+    $mymax = $mylpi->get_max();
     if ($mymax === '') {
         $mymax = "''";
     }
-    $mymin              = $mylpi->get_min();
-    $mylesson_status    = $mylpi->get_status();
-    $mylesson_location  = $mylpi->get_lesson_location();
-    $mytotal_time       = $mylpi->get_scorm_time('js');
-    $mymastery_score    = $mylpi->get_mastery_score();
-    $mymax_time_allowed = $mylpi->get_max_time_allowed();
-    $mylaunch_data      = $mylpi->get_launch_data();
-    /*
-    if ($mylpi->get_type() == 'asset') {
-        // Temporary measure to save completion of an asset. Later on, Chamilo should trigger something on unload, maybe... (even though that would mean the last item cannot be completed)
-        $mylesson_status = 'completed';
-        $mylpi->set_status('completed');
-        $mylpi->save();
-    }
-    */
-    $mysession_time    = $mylpi->get_total_time();
-    $mysuspend_data    = $mylpi->get_suspend_data();
+    $mymin = $mylpi->get_min();
+    $mylesson_status = $mylpi->get_status();
     $mylesson_location = $mylpi->get_lesson_location();
-    $myic              = $mylpi->get_interactions_count();
-    $myistring         = '';
+    $mytotal_time = $mylpi->get_scorm_time('js');
+    $mymastery_score = $mylpi->get_mastery_score();
+    $mymax_time_allowed = $mylpi->get_max_time_allowed();
+    $mylaunch_data = $mylpi->get_launch_data();
+    $mysession_time = $mylpi->get_total_time();
+    $mysuspend_data = $mylpi->get_suspend_data();
+    $myic = $mylpi->get_interactions_count();
+    $myistring = '';
     for ($i = 0; $i < $myic; $i++) {
         $myistring .= ",[".$i.",'','','','','','','']";
     }
@@ -231,7 +236,7 @@ function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_it
         //"lms_progress_bar_mode='".$myprogress_mode."';" .
         "olms.lms_view_id=".$view_id.";".
         "olms.lms_user_id=".$user_id.";".
-        "olms.next_item=".$new_item_id.";". // This one is very important to replace possible literal strings.
+        "olms.next_item=".$new_item_id.";".// This one is very important to replace possible literal strings.
         "olms.lms_next_item=".$mynext.";".
         "olms.lms_previous_item=".$myprevious.";".
         "olms.lms_item_type = '".$myitemtype."';".
@@ -252,10 +257,11 @@ function switch_item_details($lp_id, $user_id, $view_id, $current_item, $next_it
     $mylp->prerequisites_match(); // Check the prerequisites are all complete.
     if ($debug > 1) {
         error_log('Prereq_match() returned '.htmlentities($mylp->error), 0);
+        error_log($return);
     }
     $_SESSION['scorm_item_id'] = $new_item_id; // Save the new item ID for the exercise tool to use.
     $_SESSION['lpobject']      = serialize($mylp);
     return $return;
 }
-
 echo switch_item_details($_REQUEST['lid'], $_REQUEST['uid'], $_REQUEST['vid'], $_REQUEST['iid'], $_REQUEST['next']);
+exit;

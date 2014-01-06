@@ -9,31 +9,15 @@
 <meta name="Generator" content="{{ _s.software_name }} {{ _s.system_version|slice(0,1) }}" />
 {#  Use the latest engine in ie8/ie9 or use google chrome engine if available  #}
 {#  Improve usability in portal devices #}
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ title_string }}</title>
 {{ css_file_to_string }}
 {{ css_style_print }}
 {{ js_file_to_string }}
 {{ extra_headers }}
+{% block header_end %}{% endblock header_end %}
 <script>
-//<![CDATA[
-// This is a patch for the "__flash__removeCallback" bug, see FS#4378.
-{% raw %}
-if ((navigator.userAgent.toLowerCase().indexOf('msie') != -1 ) && ( navigator.userAgent.toLowerCase().indexOf('opera') == -1 )) {
-    window.attachEvent( 'onunload', function() {
-        window['__flash__removeCallback'] = function ( instance, name ) {
-            try {
-                if ( instance ) {
-                    instance[name] = null ;
-                }
-            } catch ( flashEx ) {
-            }
-        } ;
-    });
-}
-{% endraw %}
-//]]>
-
 function setCheckbox(value, table_id) {
     checkboxes = $("#"+table_id+" input:checkbox");
     $.each(checkboxes, function(index, checkbox) {
@@ -60,11 +44,12 @@ function action_click(element, table_id) {
 }
 
 /* Global chat variables */
+
 var ajax_url        = '{{ _p.web_ajax }}chat.ajax.php';
-var online_button   = '{{ online_button }}';
-var offline_button  = '{{ offline_button }}';
-var connect_lang    = '{{ "ChatConnected"|get_lang }}';
-var disconnect_lang = '{{ "ChatDisconnected"|get_lang }}';
+var online_button   = '{{ online_button |e('js') }}';
+var offline_button  = '{{ offline_button |e('js') }}';
+var connect_lang    = '{{ "ChatConnected"|get_lang |e('js') }}';
+var disconnect_lang = '{{ "ChatDisconnected"|get_lang |e('js') }}';
 
 function get_url_params(q, attribute) {
     var vars;
@@ -91,7 +76,7 @@ function check_brand() {
 }
 
 $(window).resize(function() {
-    check_brand();
+    //check_brand();
 });
 
 $(document).scroll(function() {
@@ -260,7 +245,7 @@ $(function() {
 
     check_brand();
 
-    // Removes the yellow input in Chrome
+    //Removes the yellow input in Chrome
     if (navigator.userAgent.toLowerCase().indexOf("chrome") >= 0) {
         $(window).load(function(){
             $('input:-webkit-autofill').each(function(){
@@ -282,7 +267,7 @@ $(function() {
     $('.dropdown-toggle').dropdown();
 
     // Responsive effect.
-    $(".collapse").collapse();
+    //$(".collapse").collapse();
 
     $(".accordion_jquery").accordion({
         autoHeight: false,
@@ -319,32 +304,22 @@ $(function() {
         }
 
         // load remote content
-        dialog.load(
-            url,
-            {},
-            function(responseText, textStatus, XMLHttpRequest) {
-                dialog.dialog({
-                    modal       : true,
-                    width       : width_value,
-                    height      : height_value,
-                    resizable   : resizable_value
-                });
-            }
-        );
-        // prevent the browser to follow the link
-        return false;
-    });
-
-    // Global confirmation
-    $('.popup-confirmation').on('click', function() {
-        showConfirmationPopup(this);
+        dialog.load(url,{}, function(responseText, textStatus, XMLHttpRequest) {
+            dialog.dialog({
+                modal       : true,
+                width       : width_value,
+                height      : height_value,
+                resizable   : resizable_value
+            });
+        });
+        //prevent the browser to follow the link
         return false;
     });
 
     // old jquery.menu.js
     $('#navigation a').stop().animate({
         'marginLeft':'50px'
-    },1000);
+    }, 1000);
 
     $('#navigation > li').hover(
         function () {
@@ -358,6 +333,14 @@ $(function() {
             },200);
         }
     );
+
+    // Tiny mce
+    /*tinymce.init({
+       plugins: "media,image,elfinder",
+       selector: "textarea"
+    });*/
+
+
     /*
     $(".td_actions").hide();
 
@@ -370,4 +353,6 @@ $(function() {
     });*/
 });
 </script>
+{% block extraHead %}
+{% endblock %}
 {{ header_extra_content }}

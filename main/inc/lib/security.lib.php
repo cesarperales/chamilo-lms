@@ -41,16 +41,15 @@ class Security
     /**
      * Checks if the absolute path (directory) given is really under the
      * checker path (directory)
-     * @param	string	Absolute path to be checked (with trailing slash)
-     * @param	string	Checker path under which the path should be (absolute path, with trailing slash, get it from api_get_path(SYS_COURSE_PATH))
-     * @return	bool	True if the path is under the checker, false otherwise
+     * @param   string  Absolute path to be checked (with trailing slash)
+     * @param   string  Checker path under which the path should be (absolute path, with trailing slash, get it from api_get_path(SYS_COURSE_PATH))
+     * @return  bool    True if the path is under the checker, false otherwise
      */
     public static function check_abs_path($abs_path, $checker_path)
     {
-        // The checker path must be set.
         if (empty($checker_path)) {
             return false;
-        }
+        } // The checker path must be set.
 
         $true_path = str_replace("\\", '/', realpath($abs_path));
         $checker_path = str_replace("\\", '/', realpath($checker_path));
@@ -68,32 +67,34 @@ class Security
                 }
             }
         }
+
         return false;
     }
 
     /**
      * Checks if the relative path (directory) given is really under the
      * checker path (directory)
-     * @param	string	Relative path to be checked (relative to the current directory) (with trailing slash)
-     * @param	string	Checker path under which the path should be (absolute path, with trailing slash, get it from api_get_path(SYS_COURSE_PATH))
-     * @return	bool	True if the path is under the checker, false otherwise
+     * @param string $rel_path Relative path to be checked (relative to the current directory) (with trailing slash)
+     * @param string $checker_path Checker path under which the path should be (absolute path, with trailing slash, get it from api_get_path(SYS_COURSE_PATH))
+     *
+     * @return    bool    True if the path is under the checker, false otherwise
      */
     public static function check_rel_path($rel_path, $checker_path)
     {
-        // The checker path must be set.
         if (empty($checker_path)) {
             return false;
-        }
+        } // The checker path must be set.
         $current_path = getcwd(); // No trailing slash.
         if (substr($rel_path, -1, 1) != '/') {
             $rel_path = '/'.$rel_path;
         }
         $abs_path = $current_path.$rel_path;
-        $true_path=str_replace("\\", '/', realpath($abs_path));
+        $true_path = str_replace("\\", '/', realpath($abs_path));
         $found = strpos($true_path.'/', $checker_path);
         if ($found === 0) {
             return true;
         }
+
         return false;
     }
 
@@ -107,38 +108,45 @@ class Security
      */
     public static function filter_filename($filename)
     {
-        require_once api_get_path(LIBRARY_PATH).'fileUpload.lib.php';
-        return disable_dangerous_file($filename);
+        return FileManager::disable_dangerous_file($filename);
     }
 
     /**
      * This function checks that the token generated in get_token() has been kept (prevents
      * Cross-Site Request Forgeries attacks)
-     * @param	string	The array in which to get the token ('get' or 'post')
-     * @return	bool	True if it's the right token, false otherwise
+     * @param string $request_type The array in which to get the token ('get' or 'post')
+     *
+     * @return bool True if it's the right token, false otherwise
+     *
      */
     public static function check_token($request_type = 'post')
     {
+        $currentSessionToken = Security::getCurrentToken();
+
         switch ($request_type) {
             case 'request':
-                if (isset($_SESSION['sec_token']) && isset($_REQUEST['sec_token']) && $_SESSION['sec_token'] === $_REQUEST['sec_token']) {
+                if (isset($currentSessionToken) && isset($_REQUEST['sec_token']) && $currentSessionToken === $_REQUEST['sec_token']) {
                     return true;
                 }
+
                 return false;
             case 'get':
-                if (isset($_SESSION['sec_token']) && isset($_GET['sec_token']) && $_SESSION['sec_token'] === $_GET['sec_token']) {
+                if (isset($currentSessionToken) && isset($_GET['sec_token']) && $currentSessionToken === $_GET['sec_token']) {
                     return true;
                 }
+
                 return false;
             case 'post':
-                if (isset($_SESSION['sec_token']) && isset($_POST['sec_token']) && $_SESSION['sec_token'] === $_POST['sec_token']) {
+                if (isset($currentSessionToken) && isset($_POST['sec_token']) && $currentSessionToken === $_POST['sec_token']) {
                     return true;
                 }
+
                 return false;
             default:
-                if (isset($_SESSION['sec_token']) && isset($request_type) && $_SESSION['sec_token'] === $request_type) {
+                if (isset($currentSessionToken) && isset($request_type) && $currentSessionToken === $request_type) {
                     return true;
                 }
+
                 return false;
         }
         return false; // Just in case, don't let anything slip.
@@ -147,13 +155,14 @@ class Security
     /**
      * Checks the user agent of the client as recorder by get_ua() to prevent
      * most session hijacking attacks.
-     * @return	bool	True if the user agent is the same, false otherwise
+     * @return    bool    True if the user agent is the same, false otherwise
      */
     public static function check_ua()
     {
         if (isset($_SESSION['sec_ua']) and $_SESSION['sec_ua'] === $_SERVER['HTTP_USER_AGENT'].$_SESSION['sec_ua_seed']) {
             return true;
         }
+
         return false;
     }
 
@@ -174,13 +183,14 @@ class Security
      * the one that sent this form in knowingly (this form hasn't been generated from
      * another website visited by the user at the same time).
      * Check the token with check_token()
-     * @return	string	Hidden-type input ready to insert into a form
+     * @return    string    Hidden-type input ready to insert into a form
      */
     public static function get_HTML_token()
     {
-        $token = md5(uniqid(rand(), TRUE));
+        $token = md5(uniqid(rand(), true));
         $string = '<input type="hidden" name="sec_token" value="'.$token.'" />';
         $_SESSION['sec_token'] = $token;
+
         return $string;
     }
 
@@ -191,25 +201,23 @@ class Security
      * the one that sent this form in knowingly (this form hasn't been generated from
      * another website visited by the user at the same time).
      * Check the token with check_token()
-     * @return	string	Token
+     * @return    string    Token
      */
     public static function get_token()
     {
-        $token = md5(uniqid(rand(), TRUE));
+        $token = md5(uniqid(rand(), true));
         $_SESSION['sec_token'] = $token;
+
         return $token;
     }
 
     /**
-     * @return string
+     * Get current token
+     * @return null
      */
-    public static function get_existing_token()
+    public static function getCurrentToken()
     {
-        if (isset($_SESSION['sec_token']) && !empty($_SESSION['sec_token'])) {
-            return $_SESSION['sec_token'];
-        } else {
-            return self::get_token();
-        }
+        return isset($_SESSION['sec_token']) ? $_SESSION['sec_token'] : null;
     }
 
     /**
@@ -219,95 +227,48 @@ class Security
      */
     public static function get_ua()
     {
-        $_SESSION['sec_ua_seed'] = uniqid(rand(), TRUE);
+        $_SESSION['sec_ua_seed'] = uniqid(rand(), true);
         $_SESSION['sec_ua'] = $_SERVER['HTTP_USER_AGENT'].$_SESSION['sec_ua_seed'];
-    }
-
-    /**
-     * This function filters a variable to the type given, with the options given
-     * @param	mixed	The variable to be filtered
-     * @param	string	The type of variable we expect (bool,int,float,string)
-     * @param	array	Additional options
-     * @return	bool	True if variable was filtered and added to the current object, false otherwise
-     */
-    public static function filter($var, $type = 'string', $options = array())
-    {
-        // This function has not been finished! Do not use!
-        $result = false;
-        // Get variable name and value.
-        $args = func_get_args();
-        $names = array_keys($args);
-        $name = $names[0];
-        $value = $args[$name];
-        switch ($type) {
-            case 'bool':
-                $result = (bool) $var;
-                break;
-            case 'int':
-                $result = (int) $var;
-                break;
-            case 'float':
-                $result = (float) $var;
-                break;
-            case 'string/html':
-                $result = self::remove_XSS($var);
-                break;
-            case 'string/db':
-                $result = Database::escape_string($var);
-                break;
-            case 'array':
-                // An array variable shouldn't be given to the filter.
-                return false;
-            default:
-                return false;
-        }
-        if (!empty($option['save'])) {
-            self::$clean[$name] = $result;
-        }
-        return $result;
     }
 
     /**
      * This function returns a variable from the clean array. If the variable doesn't exist,
      * it returns null
-     * @param	string	Variable name
-     * @return	mixed	Variable or NULL on error
+     * @param    string    Variable name
+     * @return    mixed    Variable or NULL on error
      */
     public static function get($varname)
     {
         if (isset(self::$clean[$varname])) {
             return self::$clean[$varname];
         }
-        return NULL;
+
+        return null;
     }
 
     /**
      * This function tackles the XSS injections.
      * Filtering for XSS is very easily done by using the htmlentities() function.
      * This kind of filtering prevents JavaScript snippets to be understood as such.
-     * @param	mixed	The variable to filter for XSS, this params can be a string or an array (example : array(x,y))
+     * @param    mixed    The variable to filter for XSS, this params can be a string or an array (example : array(x,y))
      * @param   integer The user status,constant allowed (STUDENT, COURSEMANAGER, ANONYMOUS, COURSEMANAGERLOWSECURITY)
-     * @return	mixed	Filtered string or array
+     * @return    mixed    Filtered string or array
      */
     public static function remove_XSS($var, $user_status = ANONYMOUS, $filter_terms = false)
     {
-    	if ($filter_terms) {
-    		$var = self::filter_terms($var);
-    	}
+        // @todo improvement - HTMLpurifier eats server memory ~ 3M
+        // return $var;
+        if ($filter_terms) {
+            $var = self::filter_terms($var);
+        }
 
         if ($user_status == COURSEMANAGERLOWSECURITY) {
-            return $var;  // No filtering.
+            return $var; // No filtering.
         }
         static $purifier = array();
         if (!isset($purifier[$user_status])) {
-            if (!class_exists('HTMLPurifier')) {
-                // Lazy loading.
-                require api_get_path(LIBRARY_PATH).'htmlpurifier/library/HTMLPurifier.auto.php';
-            }
-            $cache_dir = api_get_path(SYS_ARCHIVE_PATH).'Serializer';
-            if (!file_exists($cache_dir)) {
-                mkdir($cache_dir, 0777);
-            }
+            global $app;
+            $cache_dir = $app['htmlpurifier.serializer'];
             $config = HTMLPurifier_Config::createDefault();
             //$config->set('Cache.DefinitionImpl', null); // Enable this line for testing purposes, for turning off caching. Don't forget to disable this line later!
             $config->set('Cache.SerializerPath', $cache_dir);
@@ -323,7 +284,7 @@ class Security
             }
 
             //Shows _target attribute in anchors
-            $config->set('Attr.AllowedFrameTargets', array('_blank','_top','_self', '_parent'));
+            $config->set('Attr.AllowedFrameTargets', array('_blank', '_top', '_self', '_parent'));
             if ($user_status == STUDENT) {
                 global $allowed_html_student;
                 $config->set('HTML.SafeEmbed', true);
@@ -342,24 +303,13 @@ class Security
                 global $allowed_html_anonymous;
                 $config->set('HTML.Allowed', $allowed_html_anonymous);
             }
-            $config->set('Attr.EnableID', true); // We need it for example for the flv player (ids of surrounding div-tags have to be preserved).
+            $config->set(
+                'Attr.EnableID',
+                true
+            ); // We need it for example for the flv player (ids of surrounding div-tags have to be preserved).
             $config->set('CSS.AllowImportant', true);
             $config->set('CSS.AllowTricky', true); // We need for the flv player the css definition display: none;
             $config->set('CSS.Proprietary', true);
-
-            // Allow uri scheme.
-            $config->set('URI.AllowedSchemes', array(
-                'http' => true,
-                'https' => true,
-                'mailto' => true,
-                'ftp' => true,
-                'nntp' => true,
-                'news' => true,
-                'data' => true,
-            ));
-
-            $purifier[$user_status] = new HTMLPurifier($config);
-        }
 
         if (is_array($var)) {
             return $purifier[$user_status]->purifyArray($var);
@@ -368,16 +318,15 @@ class Security
         }
     }
 
-
     /**
      *
      * Filter content
-     * @param	string content to be filter
-     * @return 	string
+     * @param    string content to be filter
+     * @return     string
      */
     static function filter_terms($text)
     {
-    	static $bad_terms = array();
+        static $bad_terms = array();
 
         if (empty($bad_terms)) {
             $list = api_get_setting('filter_terms');
@@ -396,34 +345,31 @@ class Security
             }
         }
 
-    	$replace = '***';
+        $replace = '***';
+        if (!empty($bad_terms)) {
+            //Fast way
+            $new_text = str_ireplace($bad_terms, $replace, $text, $count);
 
-    	if (!empty($bad_terms)) {
-    		//Fast way
-    		$new_text = str_ireplace($bad_terms, $replace, $text, $count);
-
-    		//We need statistics
-    		/*
-    		if (strlen($new_text) != strlen($text)) {
-    			$table = Database::get_main_table(TABLE_STATISTIC_TRACK_FILTERED_TERMS);
-    			$attributes = array();
+            //We need statistics
+            /*
+            if (strlen($new_text) != strlen($text)) {
+                $table = Database::get_main_table(TABLE_STATISTIC_TRACK_FILTERED_TERMS);
+                $attributes = array();
 
 
-    			$attributes['user_id'] 		=
-    			$attributes['course_id'] 	=
-    			$attributes['session_id'] 	=
-    			$attributes['tool_id'] 		=
-    			$attributes['term'] 		=
-    			$attributes['created_at'] 	= api_get_utc_datetime();
-    			$sql = Database::insert($table, $attributes);
-    		}
-    		*/
-    		$text = $new_text;
-
-    	}
-		return $text;
+                $attributes['user_id'] 		=
+                $attributes['course_id'] 	=
+                $attributes['session_id'] 	=
+                $attributes['tool_id'] 		=
+                $attributes['term'] 		=
+                $attributes['created_at'] 	= api_get_utc_datetime();
+                $sql = Database::insert($table, $attributes);
+            }
+            */
+            $text = $new_text;
+        }
+        return $text;
     }
-
 
     /**
      * This method provides specific protection (against XSS and other kinds of attacks) for static images (icons) used by the system.
@@ -466,6 +412,7 @@ class Security
         } else {
             return '';
         }
+
         return $image_path;
     }
 }

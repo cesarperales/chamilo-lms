@@ -9,8 +9,6 @@
 /**
  * Code
  */
-if(!class_exists('HotSpot')):
-
 /**
 	CLASS HotSpot
  *
@@ -36,20 +34,19 @@ class HotSpot extends Question {
 
 	function createForm (&$form, $fck_config=0) {
 		parent::createForm ($form, $fck_config);
-		global $text, $class;
 		if(!isset($_GET['editQuestion'])) {
 			$renderer = $form->defaultRenderer();
 			$form->addElement('file','imageUpload',array('<img src="../img/hotspots.png" />', get_lang('UploadJpgPicture')) );
 
 			// setting the save button here and not in the question class.php
 			// Saving a question
-			$form->addElement('style_submit_button','submitQuestion',get_lang('GoToQuestion'), 'class="'.$class.'"');
+			$form->addElement('style_submit_button','submitQuestion',get_lang('GoToQuestion'), 'class="'.$this->submitClass.'"');
 			$form->addRule('imageUpload', get_lang('OnlyImagesAllowed'), 'filetype', array ('jpg', 'jpeg', 'png', 'gif'));
 			$form->addRule('imageUpload', get_lang('NoImage'), 'uploadedfile');
 		} else {
 			// setting the save button here and not in the question class.php
 			// Editing a question
-			$form->addElement('style_submit_button','submitQuestion',get_lang('ModifyExercise'), 'class="'.$class.'"');
+			$form->addElement('style_submit_button','submitQuestion',get_lang('ModifyExercise'), 'class="'.$this->submitClass.'"');
 		}
 
 	}
@@ -115,4 +112,3 @@ class HotSpotDelineation extends HotSpot {
 		parent::processAnswersCreation ($form);
 	}
 }
-endif;

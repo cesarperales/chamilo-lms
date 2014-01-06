@@ -97,10 +97,13 @@ $page .= '<div class="row-fluid" style="overflow:hidden">';
 $page .= '<div id="lp_sidebar" class="span4">';
 $page .= $_SESSION['oLP']->return_new_tree(null, true);
 
+echo '<div class="row" style="overflow:hidden">';
+echo '<div id="lp_sidebar" class="col-md-4">';
+echo $_SESSION['oLP']->return_new_tree(null, true);
 // Show the template list.
 $page .= '</div>';
 
-$page .= '<div id="doc_form" class="span8">';
+echo '<div id="doc_form" class="col-md-8">';
 
 $form->addElement('header', get_lang('RecordYourVoice'));
 

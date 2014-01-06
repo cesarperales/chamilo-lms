@@ -50,6 +50,7 @@ define('TABLE_MAIN_COURSE_REQUEST',         'course_request');
 // Gradebook
 define('TABLE_MAIN_GRADEBOOK_CATEGORY',     'gradebook_category');
 define('TABLE_MAIN_GRADEBOOK_EVALUATION',   'gradebook_evaluation');
+define('TABLE_MAIN_GRADEBOOK_EVALUATION_TYPE',   'gradebook_evaluation_type');
 define('TABLE_MAIN_GRADEBOOK_LINKEVAL_LOG', 'gradebook_linkeval_log');
 define('TABLE_MAIN_GRADEBOOK_RESULT',       'gradebook_result');
 define('TABLE_MAIN_GRADEBOOK_RESULT_LOG',   'gradebook_result_log');
@@ -66,11 +67,6 @@ define('TABLE_MAIN_USER_FIELD_VALUES',  'user_field_values');
 define('TABLE_MAIN_TAG',                'tag');
 define('TABLE_MAIN_USER_REL_TAG',       'user_rel_tag');
 
-//User groups
-define('TABLE_MAIN_GROUP',              'groups');
-define('TABLE_MAIN_USER_REL_GROUP',     'group_rel_user');
-define('TABLE_MAIN_GROUP_REL_TAG',      'group_rel_tag');
-define('TABLE_MAIN_GROUP_REL_GROUP',		'group_rel_group');
 
 // Search engine
 define('TABLE_MAIN_SPECIFIC_FIELD',         'specific_field');
@@ -101,10 +97,20 @@ define('TABLE_MAIN_USER_FRIEND_RELATION_TYPE', 'user_friend_relation_type');
 
 // Web services
 define('TABLE_MAIN_USER_API_KEY',           'user_api_key');
+
+//Extra fields
 define('TABLE_MAIN_COURSE_FIELD',           'course_field');
+define('TABLE_MAIN_COURSE_FIELD_OPTIONS',   'course_field_options');
 define('TABLE_MAIN_COURSE_FIELD_VALUES',    'course_field_values');
+
 define('TABLE_MAIN_SESSION_FIELD',          'session_field');
+define('TABLE_MAIN_SESSION_FIELD_OPTIONS',  'session_field_options');
 define('TABLE_MAIN_SESSION_FIELD_VALUES',   'session_field_values');
+
+define('TABLE_MAIN_QUESTION_FIELD',          'question_field');
+define('TABLE_MAIN_QUESTION_FIELD_OPTIONS',  'question_field_options');
+define('TABLE_MAIN_QUESTION_FIELD_VALUES',   'question_field_values');
+
 
 // Message
 define('TABLE_MAIN_MESSAGE', 'message');
@@ -131,14 +137,7 @@ define('TABLE_STATISTIC_TRACK_E_DEFAULT',           'track_e_default');
 define('TABLE_STATISTIC_TRACK_E_UPLOADS',           'track_e_uploads');
 define('TABLE_STATISTIC_TRACK_E_HOTSPOT',           'track_e_hotspot');
 define('TABLE_STATISTIC_TRACK_E_ITEM_PROPERTY',     'track_e_item_property');
-define('TABLE_STATISTIC_TRACK_E_OPEN',              'track_e_open');
-
 define('TABLE_STATISTIC_TRACK_FILTERED_TERMS',      'track_filtered_terms');
-define('TABLE_STATISTIC_TRACK_C_BROWSERS',          'track_c_browsers');
-define('TABLE_STATISTIC_TRACK_C_COUNTRIES',         'track_c_countries');
-define('TABLE_STATISTIC_TRACK_C_OS',                'track_c_os');
-define('TABLE_STATISTIC_TRACK_C_PROVIDERS',         'track_c_providers');
-define('TABLE_STATISTIC_TRACK_C_REFERERS',          'track_c_referers');
 
 //Course catalog stats see #4191
 define('TABLE_STATISTIC_TRACK_COURSE_RANKING',      'track_course_ranking');
@@ -195,15 +194,16 @@ define('TABLE_DROPBOX_POST',    'dropbox_post');
 define('TABLE_DROPBOX_FILE',    'dropbox_file');
 define('TABLE_DROPBOX_PERSON',  'dropbox_person');
 
-// Course quiz (or test, or exercice) tables
+// Course quiz (or test, or exercise) tables
 define('TABLE_QUIZ_QUESTION',               'quiz_question');
 define('TABLE_QUIZ_TEST',                   'quiz');
 define('TABLE_QUIZ_ORDER',                  'quiz_order');
 define('TABLE_QUIZ_ANSWER',                 'quiz_answer');
 define('TABLE_QUIZ_TEST_QUESTION',          'quiz_rel_question');
 define('TABLE_QUIZ_QUESTION_OPTION',        'quiz_question_option');
-define('TABLE_QUIZ_QUESTION_CATEGORY',      'quiz_question_category');
+define('TABLE_QUIZ_CATEGORY',               'quiz_category');
 define('TABLE_QUIZ_QUESTION_REL_CATEGORY',  'quiz_question_rel_category');
+define('TABLE_QUIZ_REL_CATEGORY',           'quiz_rel_category');
 
 // Linked resource table
 //@todo table exists?
@@ -211,6 +211,7 @@ define('TABLE_LINKED_RESOURCES', 'resource');
 
 // New SCORM tables
 define('TABLE_LP_MAIN', 'lp');
+define('TABLE_LP_CATEGORY', 'lp_category');
 define('TABLE_LP_ITEM', 'lp_item');
 define('TABLE_LP_VIEW', 'lp_view');
 define('TABLE_LP_ITEM_VIEW', 'lp_item_view');
@@ -303,6 +304,16 @@ define('TABLE_THEMATIC','thematic');
 define('TABLE_THEMATIC_PLAN', 'thematic_plan');
 define('TABLE_THEMATIC_ADVANCE','thematic_advance');
 
+//User groups
+//Needed for migration
+define('TABLE_MAIN_GROUP',              'groups');
+
+/*
+define('TABLE_MAIN_USER_REL_GROUP',     'group_rel_user');
+define('TABLE_MAIN_GROUP_REL_TAG',      'group_rel_tag');
+define('TABLE_MAIN_GROUP_REL_GROUP',    'group_rel_group');
+*/
+
 // Careers, promotions, Usergroups
 define('TABLE_CAREER',      'career');
 define('TABLE_PROMOTION',   'promotion');
@@ -311,6 +322,8 @@ define('TABLE_USERGROUP',               'usergroup');
 define('TABLE_USERGROUP_REL_USER',      'usergroup_rel_user');
 define('TABLE_USERGROUP_REL_COURSE',    'usergroup_rel_course');
 define('TABLE_USERGROUP_REL_SESSION',   'usergroup_rel_session');
+define('TABLE_USERGROUP_REL_TAG',       'usergroup_rel_tag');
+define('TABLE_USERGROUP_REL_USERGROUP', 'usergroup_rel_usergroup');
 
 // Mail notifications
 define('TABLE_NOTIFICATION',               'notification');
@@ -338,3 +351,10 @@ define('TABLE_TIMELINE',                    'timeline');
 //Gradebook model
 define('TABLE_GRADE_MODEL',                  'grade_model');
 define('TABLE_GRADE_MODEL_COMPONENTS',       'grade_components');
+
+// Transaction related tables
+define('TABLE_BRANCH_SYNC',                  'branch_sync');
+define('TABLE_BRANCH_TRANSACTION',           'branch_transaction');
+define('TABLE_BRANCH_TRANSACTION_STATUS',    'branch_transaction_status');
+define('TABLE_BRANCH_TRANSACTION_DATA',      'branch_transaction_data');
+define('TABLE_BRANCH_TRANSACTION_LOG',       'branch_transaction_log');

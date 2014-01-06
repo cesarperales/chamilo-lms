@@ -29,10 +29,13 @@
 // Flag to allow for anonymous user - needs to be set before global.inc.php.
 $use_anonymous = true;
 
-require_once 'back_compat.inc.php';
 require_once 'learnpath.class.php';
 require_once 'learnpathItem.class.php';
 require_once 'scorm.class.php';
+
+$app['template.show_footer'] = false;
+$app['template.show_header'] = false;
+$app['default_layout'] = 'default/layout/blank.tpl';
 
 $file   = (empty($_SESSION['file'])?'':$_SESSION['file']);
 /** @var Learnpath $oLP */
@@ -40,15 +43,24 @@ $oLP    = unserialize($_SESSION['lpobject']);
 $oItem 	= $oLP->items[$oLP->current];
 
 if (!is_object($oItem)) {
-    error_log('New LP - scorm_api - Could not load oItem item',0);
+    error_log('New LP - scorm_api - Could not load oItem item', 0);
     exit;
 }
+
+$imagePath = api_get_path(WEB_IMG_PATH);
+
 $autocomplete_when_80pct = 0;
 $user = api_get_user_info();
 header('Content-type: text/javascript');
 
-?>var scorm_logs=<?php echo ((empty($oLP->scorm_debug) or (!api_is_course_admin() && !api_is_platform_admin()) )?'0':'3');?>; //debug log level for SCORM. 0 = none, 1=light, 2=a lot, 3=all - displays logs in log frame
+?>var scorm_logs = <?php echo ((empty($oLP->scorm_debug) or (!api_is_course_admin() && !api_is_platform_admin()) )?'0':'3');?>; //debug log level for SCORM. 0 = none, 1=light, 2=a lot, 3=all - displays logs in log frame
 var lms_logs = 0; //debug log level for LMS actions. 0=none, 1=light, 2=a lot, 3=all
+
+var notAttemptedImage = '<?php echo $imagePath ?>notattempted.gif';
+var incompleteImage = '<?php echo $imagePath ?>incomplete.png';
+var completedImage = '<?php echo $imagePath ?>completed.png';
+var deleteImage = '<?php echo $imagePath ?>delete.png';
+var notAttemptedImage = '<?php echo $imagePath ?>notattempted.gif';
 
 // API Object initialization (eases access later on)
 function APIobject() {
@@ -173,7 +185,7 @@ olms.lms_initialized = 0;
 
 olms.lms_view_id = '<?php echo $oLP->get_view();?>';
 if(olms.lms_view_id == ''){ olms.lms_view_id = 1;}
-olms.lms_user_id = '<?php echo $_user['user_id'];?>';
+olms.lms_user_id = '<?php echo api_get_user_id();?>';
 olms.lms_next_item = '<?php echo $oLP->get_next_item_id();?>';
 olms.lms_previous_item = '<?php echo $oLP->get_previous_item_id();?>';
 olms.lms_lp_type = '<?php echo $oLP->get_type();?>';
@@ -188,8 +200,8 @@ olms.lms_course_code = '<?php echo $oLP->getCourseCode(); ?>';
 <?php echo $oLP->get_items_details_as_js('olms.lms_item_types');?>
 
 olms.asset_timer = 0;
-olms.userfname = '<?php echo str_replace("'","\\'",$user['firstname']); ?>';
-olms.userlname = '<?php echo str_replace("'","\\'",$user['lastname']); ?>';
+olms.userfname = '<?php echo str_replace("'","\\'", $user['firstname']); ?>';
+olms.userlname = '<?php echo str_replace("'","\\'", $user['lastname']); ?>';
 
 olms.execute_stats = false;
 
@@ -413,11 +425,11 @@ function LMSGetValue(param) {
         }
     } else if(param == 'cmi.core.student_id'){
         // ---- cmi.core.student_id
-        result='<?php echo $_user['user_id']; ?>';
+        result='<?php echo api_get_user_id(); ?>';
     } else if(param == 'cmi.core.student_name'){
         // ---- cmi.core.student_name
         <?php
-          $who = addslashes(api_get_person_name($_user['firstName'], $_user['lastName']));
+          $who = addslashes($user['complete_name']);
           echo "result='$who';";
         ?>
     } else if(param == 'cmi.core.lesson_location'){
@@ -1048,6 +1060,7 @@ function addListeners(){
  * leaving it
  */
 function lms_save_asset() {
+    logit_lms('lms_save_asset called');
     // only for Chamilo lps
     if (olms.execute_stats) {
         olms.execute_stats = false;
@@ -1178,38 +1191,38 @@ function update_toc(update_action, update_id, change_ids) {
                 myelem.attr('class',"scorm_item_highlight");
                 break;
             case 'not attempted':
-                if( myelemimg.attr('src') != '../img/notattempted.gif') {
-                    myelemimg.attr('src','../img/notattempted.gif');
+                if( myelemimg.attr('src') != notAttemptedImage) {
+                    myelemimg.attr('src', notAttemptedImage);
                     myelemimg.attr('alt','n');
                 }
                 break;
             case 'incomplete':
-                if( myelemimg.attr('src') != '../img/incomplete.png') {
-                    myelemimg.attr('src','../img/incomplete.png');
+                if( myelemimg.attr('src') != incompleteImage) {
+                    myelemimg.attr('src', incompleteImage);
                     myelemimg.attr('alt','i');
                 }
                 break;
             case 'completed':
-                if( myelemimg.attr('src') != '../img/completed.png') {
-                    myelemimg.attr('src','../img/completed.png');
+                if( myelemimg.attr('src') != completedImage) {
+                    myelemimg.attr('src', completedImage);
                     myelemimg.attr('alt','c');
                 }
                 break;
             case 'failed':
-                if( myelemimg.attr('src') != '../img/delete.png') {
-                    myelemimg.attr('src','../img/delete.png');
+                if( myelemimg.attr('src') != deleteImage) {
+                    myelemimg.attr('src', deleteImage);
                     myelemimg.attr('alt','f');
                 }
                 break;
             case 'passed':
-                if( myelemimg.attr('src') != '../img/completed.png' && myelemimg.attr('alt') != 'passed') {
-                    myelemimg.attr('src','../img/completed.png');
+                if( myelemimg.attr('src') != completedImage && myelemimg.attr('alt') != 'passed') {
+                    myelemimg.attr('src', completedImage);
                     myelemimg.attr('alt','p');
                 }
                 break;
             case 'browsed':
-                if( myelemimg.attr('src') != '../img/completed.png' && myelemimg.attr('alt') != 'browsed') {
-                    myelemimg.attr('src','../img/completed.png');
+                if( myelemimg.attr('src') != completedImage && myelemimg.attr('alt') != 'browsed') {
+                    myelemimg.attr('src', completedImage);
                     myelemimg.attr('alt','b');
                 }
                 break;
@@ -1479,7 +1492,7 @@ function switch_item(current_item, next_item){
     }
 
     <?php } else { ?>
-            log_in_log('loading '+mysrc+' in frame');
+            //console.log('loading '+mysrc+' in frame');
             cont_f.attr("src",mysrc);
     <?php } ?>
 
@@ -1708,7 +1721,6 @@ function xajax_save_objectives(lms_lp_id,lms_user_id,lms_view_id,lms_item_id,ite
  * @uses    lp_ajax_switch_item.php
  */
 function xajax_switch_item_details(lms_lp_id,lms_user_id,lms_view_id,lms_item_id,next_item) {
-
     var params = {
         'lid': lms_lp_id,
         'uid': lms_user_id,

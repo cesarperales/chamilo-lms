@@ -24,7 +24,6 @@ $_SESSION['whereami'] = 'document/voicerecord';
 $this_section = SECTION_COURSES;
 
 require_once api_get_path(SYS_CODE_PATH).'document/document.inc.php';
-require_once api_get_path(LIBRARY_PATH).'groupmanager.lib.php';
 
 $nameTools = get_lang('VoiceRecord');
 
@@ -34,7 +33,7 @@ api_block_anonymous_users();
 $document_data = DocumentManager::get_document_data_by_id($_GET['id'], api_get_course_id(), true);
 if (empty($document_data)) {
     if (api_is_in_group()) {
-        $group_properties   = GroupManager::get_group_properties(api_get_group_id());        
+        $group_properties   = GroupManager::get_group_properties(api_get_group_id());
         $document_id        = DocumentManager::get_document_id(api_get_course_info(), $group_properties['directory']);
         $document_data      = DocumentManager::get_document_data_by_id($document_id, api_get_course_id());
     }
@@ -93,11 +92,7 @@ if (isset ($_SESSION['_gid']) && $_SESSION['_gid'] != 0) {
 
 $interbreadcrumb[] = array ("url" => "./document.php?id=".$document_id.$req_gid, "name" => get_lang('Documents'));
 
-if (!$is_allowed_in_course) {
-	api_not_allowed(true);
-}
-
-if (!($is_allowed_to_edit || $_SESSION['group_member_with_upload_rights'] || is_my_shared_folder(api_get_user_id(), Security::remove_XSS($dir),api_get_session_id()))) {
+if (!($is_allowed_to_edit || GroupManager::groupMemberWithUploadRights() || is_my_shared_folder(api_get_user_id(), Security::remove_XSS($dir),api_get_session_id()))) {
 	api_not_allowed(true);
 }
 
@@ -114,14 +109,14 @@ if (isset ($group)) {
 }
 
 // Interbreadcrumb for the current directory root path
-$counter = 0;   
+$counter = 0;
 if (isset($document_data['parents'])) {
     foreach($document_data['parents'] as $document_sub_data) {
         //fixing double group folder in breadcrumb
         if (api_get_group_id()) {
             if ($counter == 0) {
                 $counter++;
-                continue;  
+                continue;
             }
         }
         $interbreadcrumb[] = array('url' => $document_sub_data['document_url'], 'name' => $document_sub_data['title']);
@@ -164,7 +159,7 @@ echo '</div>';
 			document.getElementById('audio_title').readOnly = true;
 			//document.getElementById('audio_title').style.display='none';
 			document.getElementById('audio_button').style.display='none';
-			
+
 			Wami.setup({
 				id : "wami",
 				onReady : setupGUI
@@ -175,7 +170,7 @@ echo '</div>';
 	function setupGUI() {
 		var waminame = document.getElementById("audio_title").value+".wav";//adding name file and extension
 	    var waminame_play=waminame;
-			
+
 		var gui = new Wami.GUI({
 			id : "wami",
 			singleButton : true,
@@ -184,7 +179,7 @@ echo '</div>';
 			buttonUrl : "<?php echo api_get_path(WEB_LIBRARY_PATH) ?>wami-recorder/buttons.png",
 			swfUrl : 	"<?php echo api_get_path(WEB_LIBRARY_PATH) ?>wami-recorder/Wami.swf"
 		});
-	
+
 		gui.setPlayEnabled(false);
 	}
 

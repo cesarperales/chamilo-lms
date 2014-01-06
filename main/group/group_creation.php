@@ -17,7 +17,6 @@ $current_course_tool  = TOOL_GROUP;
 // Notice for unauthorized people.
 api_protect_course_script(true);
 
-
 /*	Create the groups */
 
 if (isset ($_POST['action'])) {
@@ -91,7 +90,7 @@ elseif (isset($_POST['number_of_groups'])) {
         $number_of_groups = intval($_POST['number_of_groups']);
         if ($number_of_groups > 1) {
     ?>
-    <script type="text/javascript">
+    <script>
     var number_of_groups = <?php echo $number_of_groups; ?>;
     function switch_state(key) {
         for( i=1; i<number_of_groups; i++) {
@@ -134,19 +133,21 @@ elseif (isset($_POST['number_of_groups'])) {
 				$cat_options[$category['id']] = $category['title'];
 			}
 		}
-        $form = new FormValidator('create_groups_step2', 'POST', api_get_self().'?'.api_get_cidreq());
+		$form = new FormValidator('create_groups_step2', 'POST', api_get_self().'?'.api_get_cidreq());
 
-		// Modify the default templates
+		// Modify the default templates.
 		$renderer = $form->defaultRenderer();
-		$form_template = "<form {attributes}>\n<div>\n<table>\n{content}\n</table>\n</div>\n</form>";
+		$form_template = '<form {attributes}> <div><table class="table table-stripped">{content}</table></div></form>';
 		$renderer->setFormTemplate($form_template);
 		$element_template = <<<EOT
 	<tr>
 		<td>
-			<!-- BEGIN required --><span class="form_required">*</span> <!-- END required -->{label}
+			<!-- BEGIN required -->
+			<span class="form_required">*</span> <!-- END required -->{label}
 		</td>
 		<td>
-			<!-- BEGIN error --><span class="form_error">{error}</span><br /><!-- END error -->	{element}
+			<!-- BEGIN error -->
+			<span class="form_error">{error}</span><br /><!-- END error -->	{element}
 		</td>
 	</tr>
 
@@ -161,7 +162,7 @@ EOT;
 		if (api_get_setting('allow_group_categories') == 'true') {
 			$group_el[] = $form->createElement('static', null, null, '<b>'.get_lang('GroupCategory').'</b>');
 		}
-		//$group_el[] = $form->createElement('static', null, null, '<b>'.get_lang('GroupTutor').'</b>');
+
 		$group_el[] = $form->createElement('static', null, null, '<b>'.get_lang('GroupPlacesThis').'</b>');
 		$form->addGroup($group_el, 'groups', null, "\n</td>\n<td>\n", false);
 		// Checkboxes
@@ -212,16 +213,14 @@ EOT;
 	 * Show form to generate new groups
 	 */
 	$categories = GroupManager :: get_categories();
-	//echo '<blockquote>';
-	if (count($categories) > 1 || isset ($categories[0]) && $categories[0]['id'] != GroupManager::VIRTUAL_COURSE_CATEGORY) {
-        $create_groups_form = new FormValidator('create_groups', 'post', api_get_self().'?'.api_get_cidreq());
-		$create_groups_form->addElement('header', '', $nameTools);
-		$group_el = array ();
-		$group_el[] = $create_groups_form->createElement('static', null, null, get_lang('Create'));
-		$group_el[] = $create_groups_form->createElement('text', 'number_of_groups', null, array('class' => 'span1'));
-		$group_el[] = $create_groups_form->createElement('static', null, null, get_lang('NewGroups'));
+
+	if (count($categories) > 1 || isset($categories[0]) && $categories[0]['id'] != GroupManager::VIRTUAL_COURSE_CATEGORY) {
+		$create_groups_form = new FormValidator('create_groups', 'post', api_get_self().'?'.api_get_cidreq());
+		$create_groups_form->addElement('header', $nameTools);
+		$group_el = array();
+		$group_el[] = $create_groups_form->createElement('text', 'number_of_groups', array(get_lang('Create'), '1'));
 		$group_el[] = $create_groups_form->createElement('style_submit_button', 'submit', get_lang('ProceedToCreateGroup'), 'class="save"');
-		$create_groups_form->addGroup($group_el, 'create_groups', null, ' ', false);
+		$create_groups_form->addGroup($group_el, 'create_groups', get_lang('NumberOfGroupsToCreate'), ' ', false);
 		$defaults = array();
 		$defaults['number_of_groups'] = 1;
 		$create_groups_form->setDefaults($defaults);
@@ -229,6 +228,7 @@ EOT;
 	} else {
 		echo get_lang('NoCategoriesDefined');
 	}
+
 	/*
 	 * Show form to generate subgroups
 	 */

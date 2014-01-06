@@ -1,5 +1,4 @@
 <?php
-
 /* For licensing terms, see /license.txt */
 /**
  * This file contains a class used like library provides functions for auth tool. It's also used like model to courses_controller (MVC pattern)
@@ -9,15 +8,11 @@
 /**
  * Code
  */
-require_once api_get_path(LIBRARY_PATH).'tracking.lib.php';
-require_once api_get_path(LIBRARY_PATH).'course_category.lib.php';
-
 /**
  * Auth can be used to instanciate objects or as a library to manage courses
  * @package chamilo.auth
  */
-class Auth
-{
+class AuthLib {
 
     /**
      * Constructor
@@ -57,18 +52,42 @@ class Auth
 
         // Secondly we select the courses that are in a category (user_course_cat<>0) and sort these according to the sort of the category
         $user_id = intval($user_id);
-        $sql_select_courses = "SELECT course.code k, course.visual_code  vc, course.subscribe subscr, course.unsubscribe unsubscr,
-                                      course.title i, course.tutor_name t, course.db_name db, course.directory dir, course_rel_user.status status,
-                                      course_rel_user.sort sort, course_rel_user.user_course_cat user_course_cat
+        $sql_select_courses = "SELECT course.code k,
+                                      course.id as real_id,
+                                      course.visual_code vc,
+                                      course.subscribe subscr,
+                                      course.unsubscribe unsubscr,
+                                      course.title i,
+                                      course.tutor_name t,
+                                      course.db_name db,
+                                      course.directory dir,
+                                      course_rel_user.status status,
+                                      course_rel_user.sort sort,
+                                      course_rel_user.user_course_cat user_course_cat
                                 FROM $TABLECOURS course, $TABLECOURSUSER  course_rel_user
-                                WHERE course.code = course_rel_user.course_code
-                                AND   course_rel_user.relation_type<>" . COURSE_RELATION_TYPE_RRHH . "
-                                AND   course_rel_user.user_id = '" . $user_id . "' $without_special_courses
+                                WHERE course.id = course_rel_user.c_id AND
+                                        course_rel_user.relation_type<>" . COURSE_RELATION_TYPE_RRHH . " AND
+                                        course_rel_user.user_id = '" . $user_id . "' $without_special_courses
                                 ORDER BY course_rel_user.sort ASC";
         $result = Database::query($sql_select_courses);
+        $courses = array();
         while ($row = Database::fetch_array($result)) {
             //we only need the database name of the course
-            $courses[] = array('db' => $row['db'], 'code' => $row['k'], 'visual_code' => $row['vc'], 'title' => $row['i'], 'directory' => $row['dir'], 'status' => $row['status'], 'tutor' => $row['t'], 'subscribe' => $row['subscr'], 'unsubscribe' => $row['unsubscr'], 'sort' => $row['sort'], 'user_course_category' => $row['user_course_cat']);
+            //@todo this array assignation is insane fix it
+            $courses[] = array(
+                'db' => $row['db'],
+                'code' => $row['k'],
+                'visual_code' => $row['vc'],
+                'title' => $row['i'],
+                'directory' => $row['dir'],
+                'status' => $row['status'],
+                'tutor' => $row['t'],
+                'subscribe' => $row['subscr'],
+                'unsubscribe' => $row['unsubscr'],
+                'sort' => $row['sort'],
+                'user_course_category' => $row['user_course_cat'],
+                'real_id' => $row['real_id']
+            );
         }
         return $courses;
     }
@@ -79,7 +98,7 @@ class Auth
      */
     public function get_user_course_categories() {
         $user_id = api_get_user_id();
-        $table_category = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $table_category = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
         $sql = "SELECT * FROM " . $table_category . " WHERE user_id=$user_id ORDER BY sort ASC";
         $result = Database::query($sql);
         $output = array();
@@ -101,7 +120,7 @@ class Auth
         // table definitions
         $TABLECOURS = Database::get_main_table(TABLE_MAIN_COURSE);
         $TABLECOURSUSER = Database::get_main_table(TABLE_MAIN_COURSE_USER);
-        $TABLE_USER_COURSE_CATEGORY = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $TABLE_USER_COURSE_CATEGORY = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
         $TABLE_COURSE_FIELD = Database :: get_main_table(TABLE_MAIN_COURSE_FIELD);
         $TABLE_COURSE_FIELD_VALUE = Database :: get_main_table(TABLE_MAIN_COURSE_FIELD_VALUES);
 
@@ -121,16 +140,23 @@ class Auth
             $without_special_courses = ' AND course.code NOT IN (' . implode(',', $special_course_list) . ')';
         }
 
-        $sql_select_courses = "SELECT course.code, course.visual_code, course.subscribe subscr, course.unsubscribe unsubscr,
-                                                                course.title title, course.tutor_name tutor, course.db_name, course.directory, course_rel_user.status status,
-                                                                course_rel_user.sort sort, course_rel_user.user_course_cat user_course_cat
-                                        FROM    $TABLECOURS       course,
-                                                                                $TABLECOURSUSER  course_rel_user
-                                        WHERE course.code = course_rel_user.course_code
-                                        AND  course_rel_user.user_id = '" . $user_id . "'
-                                        AND  course_rel_user.relation_type <> " . COURSE_RELATION_TYPE_RRHH . "
-                                            $without_special_courses
-                                        ORDER BY course_rel_user.user_course_cat, course_rel_user.sort ASC";
+        $sql_select_courses = "SELECT course.code,
+                                    course.visual_code,
+                                    course.subscribe subscr,
+                                    course.unsubscribe unsubscr,
+                                    course.title title,
+                                    course.tutor_name tutor,
+                                    course.db_name,
+                                    course.directory,
+                                    course_rel_user.status status,
+                                    course_rel_user.sort sort,
+                                    course_rel_user.user_course_cat user_course_cat
+                                FROM    $TABLECOURS       course, $TABLECOURSUSER  course_rel_user
+                                WHERE course.id = course_rel_user.c_id
+                                AND  course_rel_user.user_id = '" . $user_id . "'
+                                AND  course_rel_user.relation_type <> " . COURSE_RELATION_TYPE_RRHH . "
+                                    $without_special_courses
+                                ORDER BY course_rel_user.user_course_cat, course_rel_user.sort ASC";
         $result = Database::query($sql_select_courses);
         $number_of_courses = Database::num_rows($result);
         $data = array();
@@ -142,22 +168,21 @@ class Auth
 
     /**
      * stores  the changes in a course category (moving a course to a different course category)
-     * @param  string    Course code
+     * @param  int Course id
      * @param  int       Category id
      * @return bool      True if it success
      */
-    public function store_changecoursecategory($course_code, $newcategory) {
-        $course_code = Database::escape_string($course_code);
+    public function store_changecoursecategory($courseId, $newcategory) {
+        $TABLECOURSUSER = Database::get_main_table(TABLE_MAIN_COURSE_USER);
+        $courseId = Database::escape_string($courseId);
         $newcategory = intval($newcategory);
         $current_user = api_get_user_id();
-        $result = false;
-
-        $TABLECOURSUSER = Database::get_main_table(TABLE_MAIN_COURSE_USER);
 
         $max_sort_value = api_max_sort_value($newcategory, $current_user); // max_sort_value($newcategory);
-        Database::query("UPDATE $TABLECOURSUSER SET user_course_cat='" . $newcategory . "', sort='" . ($max_sort_value + 1) . "' WHERE course_code='" . $course_code . "' AND user_id='" . $current_user . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ");
+        $result = Database::query("UPDATE $TABLECOURSUSER SET user_course_cat='" . $newcategory . "', sort='" . ($max_sort_value + 1) . "'
+                        WHERE c_id ='" . $courseId . "' AND user_id='" . $current_user . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . "");
 
-        if (Database::affected_rows()) {
+        if (Database::affected_rows($result)) {
             $result = true;
         }
         return $result;
@@ -203,11 +228,13 @@ class Auth
         }
 
         if (count($target_course) > 0 && count($source_course) > 0) {
-            $sql_update1 = "UPDATE $TABLECOURSUSER SET sort='" . $target_course['sort'] . "' WHERE course_code='" . $source_course['code'] . "' AND user_id='" . $current_user_id . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ";
-            $sql_update2 = "UPDATE $TABLECOURSUSER SET sort='" . $source_course['sort'] . "' WHERE course_code='" . $target_course['code'] . "' AND user_id='" . $current_user_id . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ";
+            $sql_update1 = "UPDATE $TABLECOURSUSER SET sort='" . $target_course['sort'] . "'
+                            WHERE c_id = '" . $source_course['real_id'] . "' AND user_id='" . $current_user_id . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ";
+            $sql_update2 = "UPDATE $TABLECOURSUSER SET sort='" . $source_course['sort'] . "'
+                            WHERE c_id = '" . $target_course['real_id'] . "' AND user_id='" . $current_user_id . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ";
             Database::query($sql_update2);
-            Database::query($sql_update1);
-            if (Database::affected_rows()) {
+            $result = Database::query($sql_update1);
+            if (Database::affected_rows($result)) {
                 $result = true;
             }
         }
@@ -223,7 +250,7 @@ class Auth
     public function move_category($direction, $category2move) {
 
         // the database definition of the table that stores the user defined course categories
-        $table_user_defined_category = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $table_user_defined_category = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
 
         $current_user_id = api_get_user_id();
         $user_coursecategories = $this->get_user_course_categories();
@@ -248,8 +275,8 @@ class Auth
             $sql_update1 = "UPDATE $table_user_defined_category SET sort='" . Database::escape_string($target_category['sort']) . "' WHERE id='" . intval($source_category['id']) . "' AND user_id='" . $current_user_id . "'";
             $sql_update2 = "UPDATE $table_user_defined_category SET sort='" . Database::escape_string($source_category['sort']) . "' WHERE id='" . intval($target_category['id']) . "' AND user_id='" . $current_user_id . "'";
             Database::query($sql_update2);
-            Database::query($sql_update1);
-            if (Database::affected_rows()) {
+            $result = Database::query($sql_update1);
+            if (Database::affected_rows($result)) {
                 $result = true;
             }
         }
@@ -262,7 +289,7 @@ class Auth
      */
     public function get_user_course_categories_info() {
         $current_user_id = api_get_user_id();
-        $table_category = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $table_category = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
         $sql = "SELECT * FROM " . $table_category . " WHERE user_id='" . $current_user_id . "' ORDER BY sort ASC";
         $result = Database::query($sql);
         while ($row = Database::fetch_array($result)) {
@@ -282,10 +309,10 @@ class Auth
         $title = Database::escape_string($title);
         $category_id = intval($category_id);
         $result = false;
-        $tucc = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $tucc = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
         $sql_update = "UPDATE $tucc SET title='" . api_htmlentities($title, ENT_QUOTES, api_get_system_encoding()) . "' WHERE id='" . $category_id . "'";
-        Database::query($sql_update);
-        if (Database::affected_rows()) {
+        $result = Database::query($sql_update);
+        if (Database::affected_rows($result)) {
             $result = true;
         }
         return $result;
@@ -298,16 +325,16 @@ class Auth
      */
     public function delete_course_category($category_id) {
         $current_user_id = api_get_user_id();
-        $tucc = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $tucc = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
         $TABLECOURSUSER = Database::get_main_table(TABLE_MAIN_COURSE_USER);
         $category_id = intval($category_id);
-        $result = false;
         $sql_delete = "DELETE FROM $tucc WHERE id='" . $category_id . "' and user_id='" . $current_user_id . "'";
-        Database::query($sql_delete);
-        if (Database::affected_rows()) {
+        $result = Database::query($sql_delete);
+        if (Database::affected_rows($result)) {
             $result = true;
         }
-        $sql_update = "UPDATE $TABLECOURSUSER SET user_course_cat='0' WHERE user_course_cat='" . $category_id . "' AND user_id='" . $current_user_id . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ";
+        $sql_update = "UPDATE $TABLECOURSUSER SET user_course_cat='0'
+                       WHERE user_course_cat='" . $category_id . "' AND user_id='" . $current_user_id . "' AND relation_type<>" . COURSE_RELATION_TYPE_RRHH . " ";
         Database::query($sql_update);
         return $result;
     }
@@ -317,26 +344,26 @@ class Auth
      * @param   string  Course code
      * @return  bool    True if it success
      */
-    public function remove_user_from_course($course_code) {
-
+    public function remove_user_from_course($courseId)
+    {
         $tbl_course_user = Database::get_main_table(TABLE_MAIN_COURSE_USER);
 
         // protect variables
         $current_user_id = api_get_user_id();
-        $course_code = Database::escape_string($course_code);
+        $courseId = Database::escape_string($courseId);
         $result = true;
 
         // we check (once again) if the user is not course administrator
         // because the course administrator cannot unsubscribe himself
         // (s)he can only delete the course
-        $sql_check = "SELECT * FROM $tbl_course_user WHERE user_id='" . $current_user_id . "' AND course_code='" . $course_code . "' AND status='1' ";
+        $sql_check = "SELECT * FROM $tbl_course_user WHERE user_id='" . $current_user_id . "' AND c_id ='" . $courseId . "' AND status='1' ";
         $result_check = Database::query($sql_check);
         $number_of_rows = Database::num_rows($result_check);
         if ($number_of_rows > 0) {
             $result = false;
         }
 
-        CourseManager::unsubscribe_user($current_user_id, $course_code);
+        CourseManager::unsubscribe_user($current_user_id, $courseId);
         return $result;
     }
 
@@ -347,7 +374,7 @@ class Auth
      */
     public function store_course_category($category_title) {
 
-        $tucc = Database::get_user_personal_table(TABLE_USER_COURSE_CATEGORY);
+        $tucc = Database::get_main_table(TABLE_USER_COURSE_CATEGORY);
 
         // protect data
         $current_user_id = api_get_user_id();
@@ -365,8 +392,8 @@ class Auth
         $rs = Database::query($sql);
         if (Database::num_rows($rs) == 0) {
             $sql_insert = "INSERT INTO $tucc (user_id, title,sort) VALUES ('" . $current_user_id . "', '" . api_htmlentities($category_title, ENT_QUOTES, api_get_system_encoding()) . "', '" . $nextsort . "')";
-            Database::query($sql_insert);
-            if (Database::affected_rows()) {
+            $result = Database::query($sql_insert);
+            if (Database::affected_rows($result)) {
                 $result = true;
             }
         } else {
@@ -380,13 +407,43 @@ class Auth
      * @param   string  $categoryCode Category code
      * @return  int     Count of courses
      */
-    public function count_courses_in_category($categoryCode)
-    {
-        return countCoursesInCategory($categoryCode);
+    public function count_courses_in_category($category_code) {
+        $tbl_course = Database::get_main_table(TABLE_MAIN_COURSE);
+        $TABLE_COURSE_FIELD = Database :: get_main_table(TABLE_MAIN_COURSE_FIELD);
+        $TABLE_COURSE_FIELD_VALUE = Database :: get_main_table(TABLE_MAIN_COURSE_FIELD_VALUES);
+
+        // get course list auto-register
+        $sql = "SELECT course_code FROM $TABLE_COURSE_FIELD_VALUE tcfv INNER JOIN $TABLE_COURSE_FIELD tcf ON " .
+                " tcfv.field_id =  tcf.id WHERE tcf.field_variable = 'special_course' AND tcfv.field_value = 1 ";
+
+        $special_course_result = Database::query($sql);
+        if (Database::num_rows($special_course_result) > 0) {
+            $special_course_list = array();
+            while ($result_row = Database::fetch_array($special_course_result)) {
+                $special_course_list[] = '"' . $result_row['course_code'] . '"';
+            }
+        }
+        $without_special_courses = '';
+        if (!empty($special_course_list)) {
+            $without_special_courses = ' AND course.code NOT IN (' . implode(',', $special_course_list) . ')';
+        }
+
+        $sql = "SELECT * FROM $tbl_course WHERE category_code" . (empty($category_code) ? " IS NULL" : "='" . $category_code . "'") . $without_special_courses;
+
+        if (api_is_multiple_url_enabled()) {
+            $url_access_id = api_get_current_access_url_id();
+            if ($url_access_id != -1) {
+                $tbl_url_rel_course = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
+                $sql = "SELECT * FROM $tbl_course as course INNER JOIN $tbl_url_rel_course as url_rel_course
+                        ON (url_rel_course.c_id = course.id)
+                        WHERE access_url_id = $url_access_id AND category_code" . (empty($category_code) ? " IS NULL" : "='" . $category_code . "'") . $without_special_courses;
+            }
+        }
+        return Database::num_rows(Database::query($sql));
     }
 
     /**
-     * get the browsing of the course categories (faculties)
+     * Get the browsing of the course categories (faculties)
      * @return array    array containing a list with all the categories and subcategories(if needed)
      */
     public function browse_course_categories()
@@ -399,9 +456,117 @@ class Auth
      * @param   string  $categoryCode Category code
      * @return  array   Courses data
      */
-    public function browse_courses_in_category($categoryCode, $randomValue = null)
-    {
-        return browseCoursesInCategory($categoryCode, $randomValue);
+    public function browse_courses_in_category($category_code, $random_value = null) {
+        $tbl_course = Database::get_main_table(TABLE_MAIN_COURSE);
+        $TABLE_COURSE_FIELD = Database::get_main_table(TABLE_MAIN_COURSE_FIELD);
+        $TABLE_COURSE_FIELD_VALUE = Database::get_main_table(TABLE_MAIN_COURSE_FIELD_VALUES);
+
+        // Get course list auto-register
+        $sql = "SELECT course_code
+                FROM $TABLE_COURSE_FIELD_VALUE tcfv
+                INNER JOIN $TABLE_COURSE_FIELD tcf ON tcfv.field_id = tcf.id
+                WHERE tcf.field_variable = 'special_course' AND tcfv.field_value = 1 ";
+
+        $special_course_result = Database::query($sql);
+        if (Database::num_rows($special_course_result) > 0) {
+            $special_course_list = array();
+            while ($result_row = Database::fetch_array($special_course_result)) {
+                $special_course_list[] = '"' . $result_row['course_code'] . '"';
+            }
+        }
+
+        $without_special_courses = '';
+        if (!empty($special_course_list)) {
+            $without_special_courses = ' AND course.code NOT IN (' . implode(',', $special_course_list) . ')';
+        }
+
+        if (!empty($random_value)) {
+            $random_value = intval($random_value);
+
+            $sql = "SELECT COUNT(*) FROM $tbl_course";
+            $result = Database::query($sql);
+            list($num_records) = Database::fetch_row($result);
+
+            if (api_is_multiple_url_enabled()) {
+
+                $url_access_id = api_get_current_access_url_id();
+                $tbl_url_rel_course = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
+
+                $sql = "SELECT COUNT(*) FROM $tbl_course course
+                        INNER JOIN $tbl_url_rel_course as url_rel_course ON (url_rel_course.c_id = course.id)
+                        WHERE access_url_id = $url_access_id ";
+                $result = Database::query($sql);
+                list($num_records) = Database::fetch_row($result);
+
+                $sql = "SELECT course.id FROM $tbl_course course INNER JOIN $tbl_url_rel_course as url_rel_course
+                        ON (url_rel_course.c_id = course.id)
+                        WHERE   access_url_id = $url_access_id AND
+                                RAND()*$num_records< $random_value
+                                $without_special_courses ORDER BY RAND() LIMIT 0, $random_value";
+            } else {
+                $sql = "SELECT id FROM $tbl_course course WHERE RAND()*$num_records< $random_value $without_special_courses
+                        ORDER BY RAND() LIMIT 0, $random_value";
+            }
+
+            $result = Database::query($sql);
+            $id_in = null;
+            while (list($id) = Database::fetch_row($result)) {
+                if ($id_in) {
+                    $id_in.= ",$id";
+                } else {
+                    $id_in = "$id";
+                }
+            }
+            $sql = "SELECT * FROM $tbl_course WHERE id IN($id_in)";
+        } else {
+            $category_code = Database::escape_string($category_code);
+            if (empty($category_code)) {
+                $sql = "SELECT * FROM $tbl_course WHERE 1=1 $without_special_courses ORDER BY title ";
+            } else {
+                $sql = "SELECT * FROM $tbl_course WHERE category_code='$category_code' $without_special_courses ORDER BY title ";
+            }
+
+            //showing only the courses of the current Chamilo access_url_id
+            if (api_is_multiple_url_enabled()) {
+                $url_access_id = api_get_current_access_url_id();
+                $tbl_url_rel_course = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
+                $sql = "SELECT * FROM $tbl_course as course INNER JOIN $tbl_url_rel_course as url_rel_course
+                        ON (url_rel_course.c_id = course.id)
+                        WHERE access_url_id = $url_access_id AND category_code='$category_code' $without_special_courses
+                        ORDER BY title";
+            }
+        }
+
+        $result = Database::query($sql);
+        $courses = array();
+        while ($row = Database::fetch_array($result)) {
+            $row['registration_code'] = !empty($row['registration_code']);
+            $count_users = CourseManager::get_users_count_in_course($row['code']);
+            $count_connections_last_month = Tracking::get_course_connections_count($row['id'], 0, api_get_utc_datetime(time() - (30 * 86400)));
+
+            if ($row['tutor_name'] == '0') {
+                $row['tutor_name'] = get_lang('NoManager');
+            }
+            $point_info = CourseManager::get_course_ranking($row['id'], 0);
+            $courses[] = array(
+                'real_id' => $row['id'],
+                'point_info' => $point_info,
+                'code' => $row['code'],
+                'directory' => $row['directory'],
+                'db' => $row['db_name'],
+                'visual_code' => $row['visual_code'],
+                'title' => $row['title'],
+                'tutor' => $row['tutor_name'],
+                'subscribe' => $row['subscribe'],
+                'unsubscribe' => $row['unsubscribe'],
+                'registration_code' => $row['registration_code'],
+                'creation_date' => $row['creation_date'],
+                'visibility' => $row['visibility'],
+                'count_users' => $count_users,
+                'count_connections' => $count_connections_last_month
+            );
+        }
+        return $courses;
     }
 
     /**
@@ -435,14 +600,13 @@ class Auth
         $search_term_safe = Database::escape_string($search_term);
         $sql_find = "SELECT * FROM $TABLECOURS WHERE (code LIKE '%" . $search_term_safe . "%' OR title LIKE '%" . $search_term_safe . "%' OR tutor_name LIKE '%" . $search_term_safe . "%') $without_special_courses ORDER BY title, visual_code ASC";
 
-        global $_configuration;
-        if ($_configuration['multiple_access_urls']) {
+        if (api_is_multiple_url_enabled()) {
             $url_access_id = api_get_current_access_url_id();
             if ($url_access_id != -1) {
                 $tbl_url_rel_course = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
                 $sql_find = "SELECT * FROM $TABLECOURS as course INNER JOIN $tbl_url_rel_course as url_rel_course
-                                        ON (url_rel_course.course_code=course.code)
-                                        WHERE access_url_id = $url_access_id AND  (code LIKE '%" . $search_term_safe . "%' OR title LIKE '%" . $search_term_safe . "%' OR tutor_name LIKE '%" . $search_term_safe . "%' ) $without_special_courses ORDER BY title, visual_code ASC ";
+                            ON (url_rel_course.c_id = course.id)
+                            WHERE access_url_id = $url_access_id AND (code LIKE '%" . $search_term_safe . "%' OR title LIKE '%" . $search_term_safe . "%' OR tutor_name LIKE '%" . $search_term_safe . "%' ) $without_special_courses ORDER BY title, visual_code ASC ";
             }
         }
         $result_find = Database::query($sql_find);
@@ -450,14 +614,13 @@ class Auth
         while ($row = Database::fetch_array($result_find)) {
             $row['registration_code'] = !empty($row['registration_code']);
             $count_users = count(CourseManager::get_user_list_from_course_code($row['code']));
-            $count_connections_last_month = Tracking::get_course_connections_count($row['code'], 0, api_get_utc_datetime(time() - (30 * 86400)));
-
-            $point_info = CourseManager::get_course_ranking($row['id'], 0);
+            $count_connections_last_month = Tracking::get_course_connections_count($row['id'], 0, api_get_utc_datetime(time() - (30 * 86400)));
 
             $courses[] = array(
                 'real_id' => $row['id'],
                 'point_info' => $point_info,
                 'code' => $row['code'],
+                'real_id' => $row['id'],
                 'directory' => $row['directory'],
                 'db' => $row['db_name'],
                 'visual_code' => $row['visual_code'],
@@ -491,7 +654,7 @@ class Auth
             } else {
                 $status_user_in_new_course = null;
             }
-            if (CourseManager::add_user_to_course($user_id, $course_code, $status_user_in_new_course)) {
+            if (CourseManager::add_user_to_course($user_id, $all_course_information['real_id'], $status_user_in_new_course)) {
                 $send = api_get_course_setting('email_alert_to_teacher_on_new_user_in_course', $course_code);
                 if ($send == 1) {
                     CourseManager::email_to_tutor($user_id, $course_code, $send_to_tutor_also = false);
@@ -511,9 +674,9 @@ class Auth
             $message = get_lang('CourseRequiresPassword') . '<br />';
             $message .= $all_course_information['title'].' ('.$all_course_information['visual_code'].') ';
 
-            $action  = api_get_path(WEB_CODE_PATH) . "auth/courses.php?action=subscribe_user_with_password&sec_token=" . $_SESSION['sec_token'];
+            $action  = api_get_path(WEB_CODE_PATH) . "auth/courses.php?action=subscribe_user_with_password&sec_token=" . Security::getCurrentToken();
             $form = new FormValidator('subscribe_user_with_password', 'post', $action);
-            $form->addElement('hidden', 'sec_token', $_SESSION['sec_token']);
+            $form->addElement('hidden', 'sec_token', Security::getCurrentToken());
             $form->addElement('hidden', 'subscribe_user_with_password', $all_course_information['code']);
             $form->addElement('text', 'course_registration_code');
             $form->addElement('button', 'submit', get_lang('SubmitRegistrationCode'));

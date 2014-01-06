@@ -2,10 +2,10 @@
 
 /* For licensing terms, see /license.txt */
 /**
- * 	Saving the scores.
- * 	@package chamilo.exercise
- * 	@author
- * 	@version $Id: savescores.php 15602 2008-06-18 08:52:24Z pcool $
+ *     Saving the scores.
+ * @package chamilo.exercise
+ * @author
+ * @version $Id: savescores.php 15602 2008-06-18 08:52:24Z pcool $
  */
 /**
  * Code
@@ -25,24 +25,20 @@ if (isset($_GET['origin']) && $_GET['origin'] == 'learnpath') {
 require_once '../inc/global.inc.php';
 $this_section = SECTION_COURSES;
 
-require_once api_get_path(LIBRARY_PATH).'fileManage.lib.php';
-
-$documentPath = api_get_path(SYS_COURSE_PATH).$_course['path']."/document";
-$full_file_path = $documentPath.$test;
-
-my_delete($full_file_path.$_user['user_id'].".t.html");
-
-$TABLETRACK_HOTPOTATOES = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_HOTPOTATOES);
-$tbl_learnpath_user = Database::get_course_table(TABLE_LEARNPATH_USER);
-$TABLE_LP_ITEM_VIEW = Database::get_course_table(TABLE_LP_ITEM_VIEW);
-
 $_cid = api_get_course_id();
 $test = $_REQUEST['test'];
 $score = $_REQUEST['score'];
 $origin = $_REQUEST['origin'];
-$learnpath_item_id = intval($_REQUEST['learnpath_item_id']);
-$course_info = api_get_course_info();
-$course_id = $course_info['real_id'];
+
+$documentPath = api_get_path(SYS_COURSE_PATH).$_course['path']."/document";
+$full_file_path = $documentPath.$test;
+
+FileManager::my_delete($full_file_path.$_user['user_id'].".t.html");
+
+$TABLETRACK_HOTPOTATOES = Database::get_main_table(TABLE_STATISTIC_TRACK_E_HOTPOTATOES);
+$tbl_learnpath_user = Database::get_course_table(TABLE_LEARNPATH_USER);
+$TABLE_LP_ITEM_VIEW = Database::get_course_table(TABLE_LP_ITEM_VIEW);
+
 $jscript2run = '';
 
 /**
@@ -50,14 +46,13 @@ $jscript2run = '';
  * for HotPotatoes quizzes. When coming from the learning path, we
  * use the session variables telling us which item of the learning path has to
  * be updated (score-wise)
- * @param	string	File is the exercise name (the file name for a HP)
- * @param	integer	Score to save inside the tracking tables (HP and learnpath)
- * @return	void
+ * @param    string    File is the exercise name (the file name for a HP)
+ * @param    integer    Score to save inside the tracking tables (HP and learnpath)
+ * @return    void
  */
-function save_scores($file, $score) {
-    global $origin, $_user, $_cid,
-    $TABLETRACK_HOTPOTATOES;
-    // if tracking is disabled record nothing
+function save_scores($file, $score)
+{
+    global $origin, $_user, $TABLETRACK_HOTPOTATOES;
     $weighting = 100; // 100%
     $date = api_get_utc_datetime();
 
@@ -67,11 +62,11 @@ function save_scores($file, $score) {
         // anonymous
         $user_id = "NULL";
     }
-    $sql = "INSERT INTO $TABLETRACK_HOTPOTATOES (exe_name, exe_user_id, exe_date, exe_cours_id, exe_result, exe_weighting) VALUES (
+    $sql = "INSERT INTO $TABLETRACK_HOTPOTATOES (exe_name, exe_user_id, exe_date, c_id, exe_result, exe_weighting) VALUES (
 			'".Database::escape_string($file)."',
 			'".Database::escape_string($user_id)."',
 			'".Database::escape_string($date)."',
-			'".Database::escape_string($_cid)."',
+			'".api_get_course_int_id()."',
 			'".Database::escape_string($score)."',
 			'".Database::escape_string($weighting)."')";
 

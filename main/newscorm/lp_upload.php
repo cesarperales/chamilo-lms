@@ -10,13 +10,13 @@
  */
 // Flag to allow for anonymous user - needs to be set before global.inc.php.
 $use_anonymous = true;
-require_once 'back_compat.inc.php';
+require_once '../inc/global.inc.php';
 $course_dir = api_get_course_path().'/scorm';
 $course_sys_dir = api_get_path(SYS_COURSE_PATH).$course_dir;
 if (empty($_POST['current_dir'])) {
     $current_dir = '';
 } else {
-    $current_dir = replace_dangerous_char(trim($_POST['current_dir']), 'strict');
+    $current_dir = api_replace_dangerous_char(trim($_POST['current_dir']), 'strict');
 }
 $uncompress = 1;
 
@@ -26,12 +26,13 @@ $uncompress = 1;
  * size set in php.ini, all variables from POST are cleared !
  */
 
-$user_file = Request::is_post() ? Request::file('user_file') : array();
+$user_file = isset($_POST) ? isset($_FILES['user_file']) : array();
 $user_file = $user_file ? $user_file : array();
 $is_error = isset($user_file['error']) ? $user_file['error'] : false;
-if (Request::is_post() && $is_error) {
+
+if (isset($_POST) && $is_error) {
     return api_failure::set_failure('upload_file_too_big');
-    unset($_FILEs['user_file']);
+    unset($_FILES['user_file']);
 } else if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_FILES) > 0 && !empty($_FILES['user_file']['name'])) {
 
     // A file upload has been detected, now deal with the file...
@@ -48,7 +49,7 @@ if (Request::is_post() && $is_error) {
     $extension = $info['extension'];
     $file_base_name = str_replace('.'.$extension, '', $filename);
 
-    $new_dir = replace_dangerous_char(trim($file_base_name), 'strict');
+    $new_dir = api_replace_dangerous_char(trim($file_base_name), 'strict');
     require_once 'learnpath.class.php';
     $type = learnpath::get_package_type($_FILES['user_file']['tmp_name'], $_FILES['user_file']['name']);
 
@@ -125,7 +126,7 @@ if (Request::is_post() && $is_error) {
     $filename = $info['basename'];
     $extension = $info['extension'];
     $file_base_name = str_replace('.'.$extension, '', $filename);
-    $new_dir = replace_dangerous_char(trim($file_base_name), 'strict');
+    $new_dir = api_replace_dangerous_char(trim($file_base_name), 'strict');
 
     require_once 'learnpath.class.php';
 

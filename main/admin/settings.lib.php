@@ -23,13 +23,8 @@ function handle_regions()
         // Add event to the system log.
         $user_id = api_get_user_id();
         $category = $_GET['category'];
-        event_system(
-            LOG_CONFIGURATION_SETTINGS_CHANGE,
-            LOG_CONFIGURATION_SETTINGS_CATEGORY,
-            $category,
-            api_get_utc_datetime(),
-            $user_id
-        );
+        api_set_setting_last_update();
+        event_system(LOG_CONFIGURATION_SETTINGS_CHANGE, LOG_CONFIGURATION_SETTINGS_CATEGORY, $category, api_get_utc_datetime(), $user_id);
         Display :: display_confirmation_message(get_lang('SettingsStored'));
     }
 
@@ -82,7 +77,7 @@ function handle_regions()
             echo '</td><td>';
             $selected_plugins = $plugin_obj->get_areas_by_plugin($plugin);
 
-            if ($plugin_info['is_course_plugin']) {
+            if (isset($plugin_info['is_course_plugin']) && $plugin_info['is_course_plugin']) {
                 $region_list = array('course_tool_plugin' => 'course_tool_plugin');
             } else {
                 $region_list = $plugin_region_list;
@@ -198,13 +193,13 @@ function handle_stylesheets()
     global $_configuration;
 
     // Current style.
-    $currentstyle = api_get_setting('stylesheets');
+    $currentStyle = api_get_setting('stylesheets');
 
     $is_style_changeable = false;
-
-    if ($_configuration['access_url'] != 1) {
+    $urlId = api_get_current_access_url_id();
+    if ($urlId != 1) {
         $style_info = api_get_settings('stylesheets', '', 1, 0);
-        $url_info = api_get_access_url($_configuration['access_url']);
+        $url_info = api_get_access_url($urlId);
         if ($style_info[0]['access_url_changeable'] == 1 && $url_info['active'] == 1) {
             $is_style_changeable = true;
         }
@@ -213,7 +208,6 @@ function handle_stylesheets()
     }
 
     $form = new FormValidator('stylesheet_upload', 'post', 'settings.php?category=Stylesheets#tabs-2');
-    //$form->addElement('header', get_lang('UploadNewStylesheet'));
     $form->addElement('text', 'name_stylesheet', get_lang('NameStylesheet'), array('size' => '40', 'maxlength' => '40'));
     $form->addRule('name_stylesheet', get_lang('ThisFieldIsRequired'), 'required');
     $form->addElement('file', 'new_stylesheet', get_lang('UploadNewStylesheet'));
@@ -221,6 +215,7 @@ function handle_stylesheets()
 
     $form->addRule('new_stylesheet', get_lang('InvalidExtension').' ('.implode(',', $allowed_file_types).')', 'filetype', $allowed_file_types);
     $form->addRule('new_stylesheet', get_lang('ThisFieldIsRequired'), 'required');
+
     $form->addElement('style_submit_button', 'stylesheet_upload', get_lang('Upload'), array('class'=>'save'));
 
     $show_upload_form = false;
@@ -229,7 +224,7 @@ function handle_stylesheets()
         Display::display_error_message(api_get_path(SYS_CODE_PATH).'css/'.get_lang('IsNotWritable'));
     } else {
         // Uploading a new stylesheet.
-        if ($_configuration['access_url'] == 1) {
+        if ($urlId == 1) {
             $show_upload_form = true;
         } else {
             if ($is_style_changeable) {
@@ -237,6 +232,8 @@ function handle_stylesheets()
             }
         }
     }
+
+    // Stylesheet upload.
 
     if (isset($_POST['stylesheet_upload'])) {
         if ($form->validate()) {
@@ -248,6 +245,7 @@ function handle_stylesheets()
             // Add event to the system log.
             $user_id = api_get_user_id();
             $category = $_GET['category'];
+
             event_system(LOG_CONFIGURATION_SETTINGS_CHANGE, LOG_CONFIGURATION_SETTINGS_CATEGORY, $category, api_get_utc_datetime(), $user_id);
 
             if ($result) {
@@ -277,23 +275,14 @@ function handle_stylesheets()
                     if (isset($_POST['style']) && (isset($_POST['preview']) or isset($_POST['download'])) && $_POST['style'] == $style_dir) {
                         $safe_style_dir = $style_dir;
                     } else {
-                        if ($currentstyle == $style_dir || ($style_dir == 'chamilo' && !$currentstyle)) {
-                            if (isset($_POST['style'])) {
-                                $selected = Database::escape_string($_POST['style']);
-                            } else {
-                                $selected = $style_dir;
-                            }
+                        if (!isset($_POST['style']) && ($currentStyle == $style_dir || ($style_dir == 'chamilo' && !$currentStyle))) {
+                            $selected = $style_dir;
                         }
                     }
                     $show_name = ucwords(str_replace('_', ' ', $style_dir));
-
                     if ($is_style_changeable) {
-                        $list_of_styles[$style_dir] = "<option value=\"".$style_dir."\" ".$selected." /> $show_name </option>";
+                        $list_of_styles[$style_dir] = '<option value="'.$style_dir.'" /> '.$show_name.'</option>';
                         $list_of_names[$style_dir]  = $show_name;
-                        //echo "<input type=\"radio\" name=\"style\" value=\"".$style_dir."\" ".$selected." onClick=\"parent.preview.location='style_preview.php?style=".$style_dir."';\"/>";
-                        //echo '<a href="style_preview.php?style='.$style_dir.'" target="preview">'.$show_name.'</a>';
-                    } else {
-                        //echo '<a href="style_preview.php?style='.$style_dir.'" target="preview">'.$show_name.'</a>';
                     }
                     $counter++;
                 }
@@ -302,15 +291,16 @@ function handle_stylesheets()
         closedir($handle);
     }
 
-    // Sort styles in alphabetical order.
+    // Sort styles in alphabetical order
     asort($list_of_names);
     $select_list = array();
-    foreach ($list_of_names as $style_dir=>$item) {
+    foreach ($list_of_names as $style_dir => $item) {
         $select_list[$style_dir] = strip_tags($list_of_styles[$style_dir]);
     }
 
-    $styles = &$form_change->addElement('select', 'style', get_lang('NameStylesheet'), $select_list);
-    $styles->setSelected($selected);
+    $form_change->addElement('select', 'style', get_lang('NameStylesheet'), $select_list);
+
+    $form_change->setDefaults(array('style' => $selected));
 
     if ($form_change->validate()) {
         // Submit stylesheets.
@@ -324,11 +314,14 @@ function handle_stylesheets()
             if (is_dir($dir)) {
                 $zip = new PclZip($arch);
                 // Remove path prefix except the style name and put file on disk
-                $zip->create($dir, PCLZIP_OPT_REMOVE_PATH, substr($dir,0,-strlen($safe_style_dir)));
+                $zip->create($dir, PCLZIP_OPT_REMOVE_PATH, substr($dir, 0, -strlen($safe_style_dir)));
             }
-            //@TODO: use more generic script to download.
-            $str = '<a class="btn btn-primary btn-large" href="' . api_get_path(WEB_CODE_PATH) . 'course_info/download.php?archive=' . str_replace(api_get_path(SYS_ARCHIVE_PATH), '', $arch) . '">'.get_lang('ClickHereToDownloadTheFile').'</a>';
-            Display::display_normal_message($str,false);
+            $str = '<a class="btn btn-primary btn-large" href="'.api_get_path(WEB_CODE_PATH).'course_info/download.php?archive='.str_replace(api_get_path(SYS_ARCHIVE_PATH), '', $arch) . '">'.get_lang('ClickHereToDownloadTheFile').'</a>';
+            Display::display_normal_message($str, false);
+        }
+        if (isset($_POST['preview'])) {
+            global $app;
+            $app['template']->preview_theme = 'academica';
         }
     }
 
@@ -455,7 +448,7 @@ function upload_stylesheet($values, $picture)
 }
 
 /**
- * Store plugin regions.
+ *
  */
 function store_regions()
 {
@@ -473,7 +466,6 @@ function store_regions()
         }
     }
     $shortlist_installed = array_flip(array_flip($shortlist_installed));
-
     $plugin_list = $plugin_obj->read_plugins_from_path();
 
     foreach ($plugin_list as $plugin) {
@@ -482,7 +474,7 @@ function store_regions()
             if (!empty($areas_to_installed)) {
                 $plugin_obj->remove_all_regions($plugin);
                 foreach ($areas_to_installed as $region) {
-                    if (!empty($region) && $region != '-1' ) {
+                    if (!empty($region) && $region != '-1') {
                         $plugin_obj->add_to_region($plugin, $region);
                     }
                 }
@@ -582,7 +574,7 @@ function handle_search()
 
     if ($form->validate()) {
         $formvalues = $form->exportValues();
-        $r = api_set_settings_category('Search', 'false', $_configuration['access_url']);
+        $r = api_set_settings_category('Search', 'false', api_get_current_access_url_id());
         // Save the settings.
         foreach ($formvalues as $key => $value) {
             $result = api_set_setting($key, $value, null, null);
@@ -627,8 +619,7 @@ function handle_search()
     echo '</div>';
 
     if ($search_enabled == 'true') {
-        require_once api_get_path(LIBRARY_PATH).'sortable_table.class.php';
-        $xapian_path = api_get_path(SYS_PATH).'searchdb';
+        $xapian_path = api_get_path(SYS_DATA_PATH).'searchdb';
 
         /*
         @todo Test the Xapian connection
@@ -716,17 +707,20 @@ function handle_search()
  * Wrapper for the templates
  *
  * @author Patrick Cool <patrick.cool@UGent.be>, Ghent University, Belgium
+ * @author Julio Montoya.
  * @version August 2008
  * @since Dokeos 1.8.6
  */
-function handle_templates() {
-    if ($_GET['action'] != 'add') {
+function handle_templates()
+{
+    $action = isset($_GET['action']) ? $_GET['action'] : null;
+    if ($action != 'add') {
         echo '<div class="actions" style="margin-left: 1px;">';
         echo '<a href="settings.php?category=Templates&amp;action=add">'.Display::return_icon('new_template.png', get_lang('AddTemplate'),'',ICON_SIZE_MEDIUM).'</a>';
         echo '</div>';
     }
 
-    if ($_GET['action'] == 'add' || ($_GET['action'] == 'edit' && is_numeric($_GET['id']))) {
+    if ($action == 'add' || ($action == 'edit' && is_numeric($_GET['id']))) {
         add_edit_template();
 
         // Add event to the system log.
@@ -735,7 +729,7 @@ function handle_templates() {
         event_system(LOG_CONFIGURATION_SETTINGS_CHANGE, LOG_CONFIGURATION_SETTINGS_CATEGORY, $category, api_get_utc_datetime(), $user_id);
 
     } else {
-        if ($_GET['action'] == 'delete' && is_numeric($_GET['id'])) {
+        if ($action == 'delete' && is_numeric($_GET['id'])) {
             delete_template($_GET['id']);
 
             // Add event to the system log
@@ -846,9 +840,9 @@ function actions_filter($id) {
  */
 function image_filter($image) {
     if (!empty($image)) {
-        return '<img src="'.api_get_path(WEB_PATH).'home/default_platform_document/template_thumb/'.$image.'" alt="'.get_lang('TemplatePreview').'"/>';
+        return '<img src="'.api_get_path(WEB_DATA_PATH).'document_templates/'.$image.'" alt="'.get_lang('TemplatePreview').'"/>';
     } else {
-        return '<img src="'.api_get_path(WEB_PATH).'home/default_platform_document/template_thumb/noimage.gif" alt="'.get_lang('NoTemplatePreview').'"/>';
+        return '<img src="'.api_get_path(WEB_DATA_PATH).'document_templates/noimage.gif" alt="'.get_lang('NoTemplatePreview').'"/>';
     }
 }
 
@@ -869,7 +863,7 @@ function add_edit_template() {
     } else {
         $title = get_lang('EditTemplate');
     }
-    $form->addElement('header', '', $title);
+    $form->addElement('header', $title);
 
     // Setting the form elements: the title of the template.
     $form->add_textfield('title', get_lang('Title'), false);
@@ -901,9 +895,9 @@ function add_edit_template() {
 
         // Adding an extra field: a preview of the image that is currently used.
         if (!empty($row['image'])) {
-            $form->addElement('static', 'template_image_preview', '', '<img src="'.api_get_path(WEB_PATH).'home/default_platform_document/template_thumb/'.$row['image'].'" alt="'.get_lang('TemplatePreview').'"/>');
+            $form->addElement('static', 'template_image_preview', '', '<img src="'.api_get_path(WEB_DATA_PATH).'document_templates/'.$row['image'].'" alt="'.get_lang('TemplatePreview').'"/>');
         } else {
-            $form->addElement('static', 'template_image_preview', '', '<img src="'.api_get_path(WEB_PATH).'home/default_platform_document/template_thumb/noimage.gif" alt="'.get_lang('NoTemplatePreview').'"/>');
+            $form->addElement('static', 'template_image_preview', '', '<img src="'.api_get_path(WEB_DATA_PATH).'document_templates/noimage.gif" alt="'.get_lang('NoTemplatePreview').'"/>');
         }
 
         // Setting the information of the template that we are editing.
@@ -925,20 +919,14 @@ function add_edit_template() {
             $values = $form->exportValues();
             // Upload the file.
             if (!empty($_FILES['template_image']['name'])) {
-                require_once api_get_path(LIBRARY_PATH).'fileUpload.lib.php';
-                $upload_ok = process_uploaded_file($_FILES['template_image']);
+                $upload_ok = FileManager::process_uploaded_file($_FILES['template_image']);
 
                 if ($upload_ok) {
                     // Try to add an extension to the file if it hasn't one.
-                    $new_file_name = add_ext_on_mime(stripslashes($_FILES['template_image']['name']), $_FILES['template_image']['type']);
+                    $new_file_name = FileManager::add_ext_on_mime(stripslashes($_FILES['template_image']['name']), $_FILES['template_image']['type']);
 
                     // The upload directory.
-                    $upload_dir = api_get_path(SYS_PATH).'home/default_platform_document/template_thumb/';
-
-                    // Create the directory if it does not exist.
-                    if (!is_dir($upload_dir)) {
-                        mkdir($upload_dir, api_get_permissions_for_new_directories());
-                    }
+                    $upload_dir = api_get_path(SYS_DATA_PATH).'document_templates/';
 
                     // Resize the preview image to max default and upload.
                     $temp = new Image($_FILES['template_image']['tmp_name']);
@@ -963,7 +951,7 @@ function add_edit_template() {
            if ($_GET['action'] == 'add') {
                $content_template = '<head>{CSS}<style type="text/css">.text{font-weight: normal;}</style></head><body>'.Database::escape_string($values['template_text']).'</body>';
                $sql = "INSERT INTO $table_system_template (title, content, image) VALUES ('".Database::escape_string($values['title'])."','".$content_template."','".Database::escape_string($new_file_name)."')";
-               $result = Database::query($sql);
+               Database::query($sql);
 
                // Display a feedback message.
                Display::display_confirmation_message(get_lang('TemplateAdded'));
@@ -975,7 +963,7 @@ function add_edit_template() {
                    $sql .= ", image = '".Database::escape_string($new_file_name)."'";
                }
                $sql .= " WHERE id='".Database::escape_string($_GET['id'])."'";
-               $result = Database::query($sql);
+               Database::query($sql);
 
                // Display a feedback message.
                Display::display_confirmation_message(get_lang('TemplateEdited'));
@@ -1011,7 +999,7 @@ function delete_template($id) {
     $result = Database::query($sql);
     $row = Database::fetch_array($result);
     if (!empty($row['image'])) {
-        @unlink(api_get_path(SYS_PATH).'home/default_platform_document/template_thumb/'.$row['image']);
+        @unlink(api_get_path(SYS_DATA_PATH).'document_templates/'.$row['image']);
     }
 
     // Now we remove it from the database.
@@ -1021,10 +1009,9 @@ function delete_template($id) {
     // Display a feedback message.
     Display::display_confirmation_message(get_lang('TemplateDeleted'));
 }
-
 /**
  * Returns the list of timezone identifiers used to populate the select
- *
+ * This function is called through a call_user_func() in the generate_settings_form function.
  * @return array List of timezone identifiers
  *
  * @author Guillaume Viguier <guillaume.viguier@beeznest.com>
@@ -1036,7 +1023,7 @@ function select_timezone_value() {
 
 /**
  * Returns an array containing the list of options used to populate the gradebook_number_decimals variable
- *
+ * This function is called through a call_user_func() in the generate_settings_form function.
  * @return array List of gradebook_number_decimals options
  *
  * @author Guillaume Viguier <guillaume.viguier@beeznest.com>
@@ -1044,7 +1031,6 @@ function select_timezone_value() {
 function select_gradebook_number_decimals() {
     return array('0', '1', '2');
 }
-
 function select_gradebook_default_grade_model_id() {
     $grade_model = new GradeModel();
     $models = $grade_model->get_all();
@@ -1082,17 +1068,25 @@ function update_gradebook_score_display_custom_values($values) {
     $scoredisplay->update_custom_score_display_settings($final);
 }
 
-function generate_settings_form($settings, $settings_by_access_list) {
-    global $_configuration, $settings_to_avoid, $convert_byte_to_mega_list;
-    $table_settings_current = Database :: get_main_table(TABLE_MAIN_SETTINGS_CURRENT);
+/**
+ * @param array $settings
+ * @param array $settings_by_access_list
+ * @param array $settings_to_avoid
+ * @param array $convert_byte_to_mega_list
+ * @return FormValidator
+ */
+function generate_settings_form($settings, $settings_by_access_list, $settings_to_avoid, $convert_byte_to_mega_list)
+{
+    $urlId = api_get_current_access_url_id();
+    $table_settings_current = Database::get_main_table(TABLE_MAIN_SETTINGS_CURRENT);
 
     $form = new FormValidator('settings', 'post', 'settings.php?category='.Security::remove_XSS($_GET['category']));
 
-    $form->addElement('hidden', 'search_field', (!empty($_GET['search_field'])?Security::remove_XSS($_GET['search_field']):null));
+    $form->addElement('hidden', 'keyword', (!empty($_GET['keyword']) ? Security::remove_XSS($_GET['keyword']) : null));
 
     $url_id = api_get_current_access_url_id();
 
-    if (!empty($_configuration['multiple_access_urls']) && api_is_global_platform_admin() && $url_id == 1) {
+    if (api_is_multiple_url_enabled() && api_is_global_platform_admin() && $url_id == 1) {
         $group = array();
         $group[] = $form->createElement('button', 'mark_all', get_lang('MarkAll'));
         $group[] = $form->createElement('button', 'unmark_all', get_lang('UnmarkAll'));
@@ -1100,31 +1094,47 @@ function generate_settings_form($settings, $settings_by_access_list) {
     }
 
     $default_values = array();
-
     $url_info = api_get_access_url($url_id);
-
-    $i = 0;
+    $settingsToAvoidKeys = array_filter(array_keys($settings_to_avoid));
     foreach ($settings as $row) {
-    	if (in_array($row['variable'], array_keys($settings_to_avoid))) { continue; }
-
-        if (!empty($_configuration['multiple_access_urls'])) {
+    	if (in_array($row['variable'], $settingsToAvoidKeys)) {
+            continue;
+        }
+        if (api_is_multiple_url_enabled()) {
             if (api_is_global_platform_admin()) {
                 if ($row['access_url_locked'] == 0) {
                     if ($url_id == 1) {
                         if ($row['access_url_changeable'] == '1') {
-                            $form->addElement('html', '<div style="float: right;"><a class="share_this_setting" data_status = "0"  data_to_send = "'.$row['variable'].'" href="javascript:void(0);">'.
-                                    Display::return_icon('shared_setting.png', get_lang('ChangeSharedSetting')).'</a></div>');
+                            $form->addElement(
+                                'html',
+                                '<div style="float: right;">
+                                    <a class="share_this_setting" data_status = "0"  data_to_send = "'.$row['variable'].'" href="javascript:void(0);">'.
+                                        Display::return_icon('shared_setting.png', get_lang('ChangeSharedSetting')).'
+                                    </a>
+                                </div>'
+                            );
                         } else {
-                            $form->addElement('html', '<div style="float: right;"><a class="share_this_setting" data_status = "1" data_to_send = "'.$row['variable'].'" href="javascript:void(0);">'.
-                                    Display::return_icon('shared_setting_na.png', get_lang('ChangeSharedSetting')).'</a></div>');
+                            $form->addElement(
+                                'html',
+                                '<div style="float: right;">
+                                    <a class="share_this_setting" data_status = "1" data_to_send = "'.$row['variable'].'" href="javascript:void(0);">'.
+                                    Display::return_icon('shared_setting_na.png', get_lang('ChangeSharedSetting')).'</a>
+                                </div>'
+                            );
                         }
                     } else {
                         if ($row['access_url_changeable'] == '1') {
-                            $form->addElement('html', '<div style="float: right;">'.
-                                    Display::return_icon('shared_setting.png', get_lang('ChangeSharedSetting')).'</div>');
+                            $form->addElement(
+                                'html',
+                                '<div style="float: right;">'.
+                                Display::return_icon('shared_setting.png', get_lang('ChangeSharedSetting')).'</div>'
+                            );
                         } else {
-                            $form->addElement('html', '<div style="float: right;">'.
-                                    Display::return_icon('shared_setting_na.png', get_lang('ChangeSharedSetting')).'</div>');
+                            $form->addElement(
+                                'html',
+                                '<div style="float: right;">'.
+                                Display::return_icon('shared_setting_na.png', get_lang('ChangeSharedSetting')).'</div>'
+                            );
                         }
                     }
                 }
@@ -1134,7 +1144,7 @@ function generate_settings_form($settings, $settings_by_access_list) {
         $hideme = array();
         $hide_element = false;
 
-        if ($_configuration['access_url'] != 1) {
+        if ($urlId != 1) {
             if ($row['access_url_changeable'] == 0) {
                 // We hide the element in other cases (checkbox, radiobutton) we 'freeze' the element.
                 $hide_element = true;
@@ -1150,14 +1160,16 @@ function generate_settings_form($settings, $settings_by_access_list) {
 
                 if (is_array($settings_by_access_list[ $row['variable'] ] [ $row['subkey'] ] [ $row['category'] ])) {
                     // We are sure that the other site have a selected value.
-                    if ($settings_by_access_list[ $row['variable'] ] [ $row['subkey'] ] [ $row['category'] ]['selected_value'] != '')
+                    if ($settings_by_access_list[ $row['variable'] ] [ $row['subkey'] ] [ $row['category'] ]['selected_value'] != '') {
                         $row['selected_value'] =$settings_by_access_list[$row['variable']] [$row['subkey']] [ $row['category'] ]['selected_value'];
+                    }
                 }
                 // There is no else{} statement because we load the default $row['selected_value'] of the main Chamilo site.
             }
         }
 
         switch ($row['type']) {
+            case 'text':
             case 'textfield':
                 if (in_array($row['variable'], $convert_byte_to_mega_list)) {
                     $form->addElement('text', $row['variable'], array(get_lang($row['title']), get_lang($row['comment']), get_lang('MB')), array('class' => 'span1', 'maxlength' => '8'));
@@ -1168,32 +1180,6 @@ function generate_settings_form($settings, $settings_by_access_list) {
                     $form->applyFilter($row['variable'], 'html_filter');
                     $default_values[$row['variable']] = $row['selected_value'];
 
-                    // For platform character set selection: Conversion of the textfield to a select box with valid values.
-                } elseif ($row['variable'] == 'platform_charset') {
-                    $current_system_encoding = api_refine_encoding_id(trim($row['selected_value']));
-                    $valid_encodings = array_flip(api_get_valid_encodings());
-                    if (!isset($valid_encodings[$current_system_encoding])) {
-                        $is_alias_encoding = false;
-                        foreach ($valid_encodings as $encoding) {
-                            if (api_equal_encodings($encoding, $current_system_encoding)) {
-                                $is_alias_encoding = true;
-                                $current_system_encoding = $encoding;
-                                break;
-                            }
-                        }
-                        if (!$is_alias_encoding) {
-                            $valid_encodings[$current_system_encoding] = $current_system_encoding;
-                        }
-                    }
-                    foreach ($valid_encodings as $key => &$encoding) {
-                        if (api_is_encoding_supported($key) && Database::is_encoding_supported($key)) {
-                            $encoding = $key;
-                        } else {
-                            unset($valid_encodings[$key]);
-                        }
-                    }
-                    $form->addElement('select', $row['variable'], array(get_lang($row['title']), get_lang($row['comment'])), $valid_encodings);
-                    $default_values[$row['variable']] = $current_system_encoding;
                 } else {
                     $hideme['class'] = 'span4';
                     $form->addElement('text', $row['variable'], array(get_lang($row['title']), get_lang($row['comment'])), $hideme);
@@ -1225,9 +1211,9 @@ function generate_settings_form($settings, $settings_by_access_list) {
                 break;
             case 'radio':
                 $values = api_get_settings_options($row['variable']);
-                $group = array ();
+                $group = array();
                 if (is_array($values )) {
-                    foreach ($values as $key => $value) {
+                    foreach ($values as $value) {
                         $element = & $form->createElement('radio', $row['variable'], '', get_lang($value['display_text']), $value['value']);
                         if ($hide_element) {
                             $element->freeze();
@@ -1258,7 +1244,7 @@ function generate_settings_form($settings, $settings_by_access_list) {
                     $element = & $form->createElement('checkbox', $rowkeys['subkey'], '', get_lang($rowkeys['subkeytext']));
                     if ($row['access_url_changeable'] == 1) {
                         // 2. We look into the DB if there is a setting for a specific access_url.
-                        $access_url = $_configuration['access_url'];
+                        $access_url = $urlId;
                         if (empty($access_url )) $access_url = 1;
                         $sql = "SELECT selected_value FROM $table_settings_current WHERE variable='".$rowkeys['variable']."' AND subkey='".$rowkeys['subkey']."'  AND  subkeytext='".$rowkeys['subkeytext']."' AND access_url =  $access_url";
                         $result_access = Database::query($sql);

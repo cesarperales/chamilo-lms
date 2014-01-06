@@ -29,6 +29,10 @@ $language_file = 'learnpath';
 /* Header and action code */
 
 $currentstyle = api_get_setting('stylesheets');
+
+$showImg = Display::return_icon('div_show.gif');
+$hideImg = Display::return_icon('div_hide.gif');
+
 $htmlHeadXtra[] = '<script>
 function setFocus(){
     $("#learnpath_title").focus();
@@ -41,10 +45,10 @@ $(document).ready(function () {
 function advanced_parameters() {
     if(document.getElementById(\'options\').style.display == \'none\') {
         document.getElementById(\'options\').style.display = \'block\';
-        document.getElementById(\'img_plus_and_minus\').innerHTML=\'&nbsp;<img style="vertical-align:middle;" src="../img/div_hide.gif" alt="" />&nbsp;'.get_lang('AdvancedParameters').'\';
+        document.getElementById(\'img_plus_and_minus\').innerHTML=\'&nbsp;'.$hideImg.'&nbsp;'.get_lang('AdvancedParameters').'\';
     } else {
         document.getElementById(\'options\').style.display = \'none\';
-        document.getElementById(\'img_plus_and_minus\').innerHTML=\'&nbsp;<img style="vertical-align:middle;" src="../img/div_show.gif" alt="" />&nbsp;'.get_lang('AdvancedParameters').'\';
+        document.getElementById(\'img_plus_and_minus\').innerHTML=\'&nbsp;'.$showImg.'&nbsp;'.get_lang('AdvancedParameters').'\';
     }
 }
 
@@ -76,7 +80,7 @@ $learnpath_id   = isset($_REQUEST['lp_id']) ? $_REQUEST['lp_id'] : null;
 
 // Using the resource linker as a tool for adding resources to the learning path.
 if ($action == 'add' && $type == 'learnpathitem') {
-     $htmlHeadXtra[] = "<script language='JavaScript' type='text/javascript'> window.location=\"../resourcelinker/resourcelinker.php?source_id=5&action=$action&learnpath_id=$learnpath_id&chapter_id=$chapter_id&originalresource=no\"; </script>";
+     $htmlHeadXtra[] = "<script type='text/javascript'> window.location=\"../resourcelinker/resourcelinker.php?source_id=5&action=$action&learnpath_id=$learnpath_id&chapter_id=$chapter_id&originalresource=no\"; </script>";
 }
 
 if ((!$is_allowed_to_edit) || ($isStudentView)) {
@@ -127,9 +131,15 @@ $form->addRule('lp_name', get_lang('ThisFieldIsRequired'), 'required');
 $form->addElement('hidden', 'post_time', time());
 $form->addElement('hidden', 'action', 'add_lp');
 
-$advanced = '<a href="javascript://" onclick=" return advanced_parameters()"><span id="img_plus_and_minus"><div style="vertical-align:top;" ><img style="vertical-align:middle;" src="../img/div_show.gif" alt="" />&nbsp;'.get_lang('AdvancedParameters').'</div></span></a>';
+$advanced = '<a href="javascript://" onclick=" return advanced_parameters()"><span id="img_plus_and_minus"><div style="vertical-align:top;" >&nbsp;'.$showImg.'&nbsp;'.get_lang('AdvancedParameters').'</div></span></a>';
 $form -> addElement('advanced_settings',$advanced);
 $form -> addElement('html','<div id="options" style="display:none">');
+
+$items = learnpath::get_category_from_course_into_select(api_get_course_int_id());
+if (!empty($items)) {
+    $items = array_merge(array(get_lang('SelectACategory')), $items);
+}
+$form->addElement('select', 'category_id', get_lang('Category'), $items);
 
 //Start date
 $form->addElement('checkbox', 'activate_start_date_check', null, get_lang('EnableStartTime'), array('onclick' => 'activate_start_date()'));
@@ -144,6 +154,7 @@ $form->addElement('datepicker', 'expired_on', get_lang('ExpirationDate'), array(
 $form->addElement('html','</div>');
 
 $form->addElement('html','</div>');
+
 
 $defaults['activate_start_date_check']  = 1;
 

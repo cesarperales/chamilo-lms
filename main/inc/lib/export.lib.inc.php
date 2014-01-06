@@ -11,9 +11,6 @@
 /**
  * Code
  */
-require_once 'document.lib.php';
-require_once api_get_path(LIBRARY_PATH).'pdf.lib.php';
-
 /**
  *
  * @package chamilo.library
@@ -25,30 +22,29 @@ class Export
     {
 	}
 
-    /**
-    *
-    * @deprecated use export_table_csv_utf8 instead
-    */
-    public static function export_table_csv ($data, $filename = 'export')
-    {
-        $file = api_get_path(SYS_ARCHIVE_PATH).uniqid('').'.csv';
-        $handle = @fopen($file, 'a+');
+	/**
+     *
+     * @deprecated use export_table_csv_utf8 instead
+	 */
+	public static function export_table_csv ($data, $filename = 'export') {
+		$file = api_get_path(SYS_ARCHIVE_PATH).uniqid('').'.csv';
+		$handle = @fopen($file, 'a+');
 
-        if (is_array($data)) {
-            foreach ($data as $index => $row) {
-                $line = '';
-                if (is_array($row)) {
-                    foreach($row as $value) {
-                        $line .= '"'.str_replace('"', '""', $value).'";';
-                    }
-                }
-                @fwrite($handle, $line."\n");
-            }
-        }
-        @fclose($handle);
-        DocumentManager :: file_send_for_download($file, true, $filename.'.csv');
-        return false;
-    }
+		if(is_array($data)) {
+			foreach ($data as $index => $row) {
+				$line = '';
+				if(is_array($row)) {
+					foreach($row as $value) {
+						$line .= '"'.str_replace('"', '""', $value).'";';
+					}
+				}
+				@fwrite($handle, $line."\n");
+			}
+		}
+		@fclose($handle);
+		DocumentManager :: file_send_for_download($file, true, $filename.'.csv');
+		return false;
+	}
 
 	/**
 	 * Export tabular data to CSV-file
@@ -178,8 +174,7 @@ class Export
      *
      * @param array table in array format to be read with the HTML_table class
      */
-    public static function export_table_pdf($data, $params = array())
-    {
+    public static function export_table_pdf($data, $params = array()) {
         $table_html = self::convert_array_to_html($data, $params);
         $params['format'] = isset($params['format']) ? $params['format'] : 'A4';
         $params['orientation'] = isset($params['orientation']) ? $params['orientation'] : 'P';
@@ -188,12 +183,7 @@ class Export
         $pdf->html_to_pdf_with_template($table_html);
     }
 
-    /**
-     * @param string $html
-     * @param array $params
-     */
-    public static function export_html_to_pdf($html, $params = array())
-    {
+    public static function export_html_to_pdf($html, $params = array()) {
         $params['format'] = isset($params['format']) ? $params['format'] : 'A4';
         $params['orientation'] = isset($params['orientation']) ? $params['orientation'] : 'P';
 
@@ -201,13 +191,7 @@ class Export
         $pdf->html_to_pdf_with_template($html);
     }
 
-    /**
-     * @param array $data
-     * @param array $params
-     * @return string
-     */
-    public static function convert_array_to_html($data, $params = array())
-    {
+    public static function convert_array_to_html($data, $params = array()) {
         $headers = $data[0];
         unset($data[0]);
 

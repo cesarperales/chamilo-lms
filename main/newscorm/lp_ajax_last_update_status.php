@@ -29,7 +29,11 @@ $use_anonymous = true;
 // Name of the language file that needs to be included.
 $language_file[] = 'learnpath';
 
-require_once 'back_compat.inc.php';
+require_once '../inc/global.inc.php';
+
+$app['template.show_footer'] = false;
+$app['template.show_header'] = false;
+$app['default_layout'] = 'default/layout/blank.tpl';
 
 /**
  * Writes an item's new values into the database and returns the operation result
@@ -125,7 +129,8 @@ function last_update_status($lp_id, $user_id, $view_id, $item_id) {
 }
 error_log(__LINE__);
 echo last_update_status(
-            $_REQUEST['lid'],
-            $_REQUEST['uid'],
-            $_REQUEST['vid'],
-            $_REQUEST['iid']);
+    $_REQUEST['lid'],
+    $_REQUEST['uid'],
+    $_REQUEST['vid'],
+    $_REQUEST['iid']
+);

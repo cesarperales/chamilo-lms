@@ -1,10 +1,10 @@
 <?php
 /* For licensing terms, see /license.txt */
 /**
- * 	Upload quiz: This script shows the upload quiz feature
+ *     Upload quiz: This script shows the upload quiz feature
  *  Initial work by Isaac flores on Nov 4 of 2010
  *  Encoding fixes Julio Montoya
- * 	@package chamilo.exercise
+ * @package chamilo.exercise
  */
 /**
  * Language files that should be included
@@ -19,8 +19,7 @@ $help_content = 'exercise_upload';
 
 // including the global Dokeos file
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH) . 'fileUpload.lib.php';
-require_once api_get_path(LIBRARY_PATH) . 'pear/excelreader/reader.php';
+require_once api_get_path(LIBRARY_PATH).'pear/excelreader/reader.php';
 require_once 'exercise.class.php';
 require_once 'question.class.php';
 require_once 'unique_answer.class.php';
@@ -33,57 +32,46 @@ if (!$is_allowed_to_edit) {
     api_not_allowed(true);
 }
 
-// setting the tabs
+// Setting the tabs
 $this_section = SECTION_COURSES;
-$htmlHeadXtra[] = "<script type='text/javascript'>
-  $(document).ready( function(){
-  $(\"div.formw\").attr(\"style\",\"width: 73%;\");
-  $(\"#img_plus_and_minus\").hide();
-});
-</script>";
 
 // Action handling
 lp_upload_quiz_action_handling();
 
-$interbreadcrumb[]= array ("url"=>"exercice.php", "name"=> get_lang('Exercices'));
+$interbreadcrumb[] = array("url" => "exercice.php", "name" => get_lang('Exercices'));
 
 // Display the header
 if ($origin != 'learnpath') {
     //so we are not in learnpath tool
     Display :: display_header(get_lang('ImportExcelQuiz'), 'Exercises');
     if (isset ($_GET['message'])) {
-        if (in_array($_GET['message'], array ('ExerciseEdited'))) {
+        if (in_array($_GET['message'], array('ExerciseEdited'))) {
             Display :: display_confirmation_message(get_lang($_GET['message']));
         }
     }
-} else {
-    echo '<link rel="stylesheet" type="text/css" href="' . api_get_path(WEB_CODE_PATH) . 'css/default.css"/>';
 }
 // display the actions
 echo '<div class="actions">';
 echo lp_upload_quiz_actions();
 echo '</div>';
 
-// start the content div
-echo '<div id="content_with_secondary_actions" class="gradient">';
 // the main content
 lp_upload_quiz_main();
-
-// close the content div
-echo '</div>';
 
 function lp_upload_quiz_actions() {
     $lp_id = Security::remove_XSS($_GET['lp_id']);
     $return = "";
-    $return .= '<a href="exercice.php?'.api_get_cidReq().'">'.Display::return_icon('back.png', get_lang('BackToExercisesList'),'',ICON_SIZE_MEDIUM).'</a>';
+    $return .= '<a href="exercice.php?'.api_get_cidReq().'">'.Display::return_icon('back.png', get_lang('BackToExercisesList'), '', ICON_SIZE_MEDIUM).'</a>';
+
     return $return;
 }
 
 function lp_upload_quiz_secondary_actions() {
- $lp_id = Security::remove_XSS($_GET['lp_id']);
- $return.= '';
- $return.='<a href="exercise_report.php?' . api_get_cidreq() . '">' . Display :: return_icon('reporting32.png', get_lang('Tracking')) . get_lang('Tracking') . '</a>';
- return $return;
+    $lp_id = Security::remove_XSS($_GET['lp_id']);
+    $return .= '';
+    $return.='<a href="exercise_report.php?'.api_get_cidreq().'">'.Display :: return_icon('reporting32.png', get_lang('Tracking')).get_lang('Tracking').'</a>';
+
+    return $return;
 }
 
 function lp_upload_quiz_main() {
@@ -91,11 +79,17 @@ function lp_upload_quiz_main() {
     // variable initialisation
     $lp_id = Security::remove_XSS($_GET['lp_id']);
 
-    $form = new FormValidator('upload', 'POST', api_get_self() . '?' . api_get_cidreq() . '&lp_id=' . $lp_id, '', array('enctype' => 'multipart/form-data'));
+    $form = new FormValidator('upload', 'POST', api_get_self().'?'.api_get_cidreq(
+    ).'&lp_id='.$lp_id, '', array('enctype' => 'multipart/form-data'));
     $form->addElement('header', get_lang('ImportExcelQuiz'));
     $form->addElement('file', 'user_upload_quiz', get_lang('FileUpload'));
 
-    $link = '<a href="../exercice/quiz_template.xls">'.Display::return_icon('export_excel.png', get_lang('DownloadExcelTemplate'),null,16).get_lang('DownloadExcelTemplate');
+    $link = '<a href="../exercice/quiz_template.xls">'.Display::return_icon(
+        'export_excel.png',
+        get_lang('DownloadExcelTemplate'),
+        null,
+        16
+    ).get_lang('DownloadExcelTemplate');
 
     $form->addElement('advanced_settings', $link);
 
@@ -109,8 +103,11 @@ function lp_upload_quiz_main() {
 /**
  * Handles a given Excel spreadsheets as in the template provided
  */
-function lp_upload_quiz_action_handling() {
-    global $_course, $debug;
+function lp_upload_quiz_action_handling()
+{
+    global $debug;
+    $_course = api_get_course_info();
+
     if (!isset($_POST['submit_upload_quiz'])) {
         return;
     }
@@ -187,10 +184,10 @@ function lp_upload_quiz_action_handling() {
             $score_list[$z] = $column_data; //a complete line where 1st column is 'Score'
             $z++;
         } elseif (in_array($i, $feedback_true_index)) {
-            $feedback_true_list[$q] = $column_data;//a complete line where 1st column is 'FeedbackTrue'
+            $feedback_true_list[$q] = $column_data; //a complete line where 1st column is 'FeedbackTrue'
             $q++;
         } elseif (in_array($i, $feedback_false_index)) {
-            $feedback_false_list[$l] = $column_data;//a complete line where 1st column is 'FeedbackFalse' for wrong answers
+            $feedback_false_list[$l] = $column_data; //a complete line where 1st column is 'FeedbackFalse' for wrong answers
             $l++;
         }
     }
@@ -226,7 +223,16 @@ function lp_upload_quiz_action_handling() {
         $feedback = 0;
         // Quiz object
         $quiz_object = new Exercise();
-        $quiz_id = $quiz_object->create_quiz($quiz_title, $expired_time, $type, $random, $active, $results, $max_attempt, $feedback);
+        $quiz_id = $quiz_object->create_quiz(
+            $quiz_title,
+            $expired_time,
+            $type,
+            $random,
+            $active,
+            $results,
+            $max_attempt,
+            $feedback
+        );
 
         if ($quiz_id) {
 
@@ -258,13 +264,6 @@ function lp_upload_quiz_action_handling() {
                         } else {
                             $comment = $feedback_false_list[$i][2];
                         }
-    /*
-                        if ($id == 1) {
-                            $comment = $feedback_true_list[$i][2];
-                        } elseif ($id == 2) {
-                            $comment = $feedback_false_list[$i][2];
-                        }
-    */
                         // Create answer
                         $unique_answer->create_answer($id, $question_id, $answer, $comment, $score, $correct);
                         $id++;
@@ -302,11 +301,16 @@ function lp_upload_quiz_action_handling() {
             // Add a Quiz as Lp Item
             $_SESSION['oLP']->add_item($parent, $previous, TOOL_QUIZ, $quiz_id, ($quiz_title), '');
             // Redirect to home page for add more content
-            header('location: ../newscorm/lp_controller.php?' . api_get_cidreq() . '&action=add_item&type=step&lp_id=' . Security::remove_XSS($_GET['lp_id']).'&session_id='.api_get_session_id());
+            header(
+                'Location: '.api_get_path(WEB_CODE_PATH).'newscorm/lp_controller.php?'.api_get_cidreq(
+                ).'&action=add_item&type=step&lp_id='.Security::remove_XSS(
+                    $_GET['lp_id']
+                ).'&session_id='.api_get_session_id()
+            );
             exit;
         } else {
-            //  header('location: exercice.php?' . api_get_cidreq());
-            echo '<script>window.location.href = "admin.php?'.api_get_cidReq().'&exerciseId='.$quiz_id.'&session_id='.api_get_session_id().'"</script>';
+            echo '<script>window.location.href = "'.api_get_path(WEB_CODE_PATH).'exercice/admin.php?'.api_get_cidReq(
+            ).'&exerciseId='.$quiz_id.'&session_id='.api_get_session_id().'"</script>';
         }
     }
 }

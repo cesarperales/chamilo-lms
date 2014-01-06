@@ -36,7 +36,7 @@ $form->addElement('header','',get_lang('AddQuestionToExercise'));
 
 $question_list = Question::get_question_type_list();
 $question_list_options = array();
-foreach ($question_list as $key=> $value) {    
+foreach ($question_list as $key=> $value) {
     $question_list_options[$key] = addslashes(get_lang($value[1]));
 }
 $form->addElement('select', 'question_type_hidden', get_lang('QuestionType'), $question_list_options, array('id' => 'question_type_hidden'));
@@ -48,11 +48,13 @@ $session_id  = api_get_session_id();
 $tbl_exercices = Database :: get_course_table(TABLE_QUIZ_TEST);
 $course_id = api_get_course_int_id();
 
-$sql = "SELECT id,title,type,description, results_disabled FROM $tbl_exercices WHERE c_id = $course_id AND active<>'-1' AND session_id=".$session_id." ORDER BY title ASC";
+$sql = "SELECT iid,title,type,description, results_disabled
+        FROM $tbl_exercices WHERE c_id = $course_id AND active<>'-1' AND session_id=".$session_id."
+        ORDER BY title ASC";
 $result = Database::query($sql);
 $exercises['-'] = '-'.get_lang('SelectExercice').'-';
 while ($row = Database :: fetch_array($result)) {
-	$exercises[$row['id']] = cut($row['title'], EXERCISE_MAX_NAME_SIZE);
+	$exercises[$row['iid']] = Text::cut($row['title'], EXERCISE_MAX_NAME_SIZE);
 }
 $form->addElement('select', 'exercice', get_lang('Exercice'), $exercises);
 
@@ -72,26 +74,25 @@ $form->addRule('question_type_hidden', get_lang('InvalidQuestionType'), 'validqu
 if ($form->validate()) {
 	$values = $form->exportValues();
     $answer_type = $values['question_type_hidden'];
-    
+
 	// check feedback_type from current exercise for type of question delineation
-	$exercise_id = intval($values['exercice']);	
-	$sql = "SELECT feedback_type FROM $tbl_exercices WHERE c_id = $course_id AND id = '$exercise_id'";
-	$rs_feedback_type = Database::query($sql);
-	$row_feedback_type = Database::fetch_row($rs_feedback_type);
-	$feedback_type = $row_feedback_type[0];
-	
+	$exercise_id = intval($values['exercice']);
+    $exercise = new Exercise();
+    $exercise->read($exercise_id);
+	$feedback_type = $exercise->feedback_type;
+
 	// if question type does not belong to self-evaluation (immediate feedback) it'll send an error
-	if (($answer_type == HOT_SPOT_DELINEATION && $feedback_type != 1) || 
+	if (($answer_type == HOT_SPOT_DELINEATION && $feedback_type != 1) ||
 		($feedback_type == 1 && ($answer_type != HOT_SPOT_DELINEATION && $answer_type != UNIQUE_ANSWER))) {
 		header('Location: question_create.php?'.api_get_cidreq().'&error=true');
-		exit;		
-	}	
+		exit;
+	}
 	header('Location: admin.php?exerciseId='.$values['exercice'].'&newQuestion=yes&isContent='.$values['is_content'].'&answerType='.$answer_type);
 	exit;
 } else {
 	// header
 	Display::display_header($nameTools);
-	
+
 	echo '<div class="actions">';
 	echo '<a href="exercice.php?show=test">'.Display :: return_icon('back.png', get_lang('BackToExercisesList'),'',ICON_SIZE_MEDIUM).'</a>';
 	echo '</div>';
@@ -104,10 +105,10 @@ if ($form->validate()) {
 }
 
 function check_question_type($parameter) {
-    $question_list = Question::get_question_type_list();    
+    $question_list = Question::get_question_type_list();
 	foreach ($question_list as $key => $value) {
 		$valid_question_types[] = $key;
-	}    
+	}
 	if (in_array($parameter, $valid_question_types)) {
 		return true;
 	} else {

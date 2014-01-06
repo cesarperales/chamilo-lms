@@ -733,7 +733,7 @@ $no_qualification = false;
 if ($category != '0') {
 	$cat = new Category();
 	$category_id   = intval($_GET['selectcat']);
-	$course_id     = Database::get_course_by_category($category_id);
+	$course_id     = CourseManager::get_course_by_category($category_id);
 	$show_message  = $cat->show_message_resource_delete($course_id);
 
 	if ($show_message == '') {
@@ -821,8 +821,8 @@ if (isset($first_time) && $first_time==1 && api_is_allowed_to_edit(null,true)) {
 		foreach ($cats as $cat) {
 			$allcat  = $cat->get_subcategories($stud_id, $course_code, $session_id);
 			$alleval = $cat->get_evaluations($stud_id);
-			$alllink = $cat->get_links($stud_id,true);
-
+			$alllink = $cat->get_links($stud_id, true);
+			
 			if ($cat->get_parent_id() != 0 ) {
 				$i++;
 			} else {

@@ -12,11 +12,10 @@
 // name of the language file that needs to be included
 $language_file="registration";
 
-include("../inc/global.inc.php");
-require_once(api_get_path(INCLUDE_PATH).'lib/mail.lib.inc.php');
-$this_section=SECTION_COURSES;
+require_once "../inc/global.inc.php";
+$this_section = SECTION_COURSES;
 
-if (! ($is_courseAdmin || $is_platformAdmin)) api_not_allowed(true);
+if (! (api_is_course_admin() || api_is_platform_admin())) api_not_allowed(true);
 
 $currentCourseID   = $_course['sysCode'];
 $currentCourseName = $_course['official_code'];

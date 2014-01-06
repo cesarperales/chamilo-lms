@@ -6,6 +6,7 @@
 /**
  * INIT SECTION
  */
+
 // name of the language file that needs to be included
 $language_file = array('agenda', 'group', 'announcements');
 
@@ -13,21 +14,21 @@ $language_file = array('agenda', 'group', 'announcements');
 $use_anonymous = true;
 
 // Calendar type
-$type = isset($_REQUEST['type']) && in_array($_REQUEST['type'], array('personal', 'course', 'admin')) ? $_REQUEST['type'] : 'personal';
+
+$type = isset($_REQUEST['type']) && in_array($_REQUEST['type'], array('personal', 'course', 'admin')) ?  $_REQUEST['type'] : 'personal';
 
 if ($type == 'personal') {
     $cidReset = true; // fixes #5162
 }
 
 require_once '../inc/global.inc.php';
-require_once 'agenda.lib.php';
 require_once 'agenda.inc.php';
 
-$current_course_tool = TOOL_CALENDAR_EVENT;
+$current_course_tool  = TOOL_CALENDAR_EVENT;
 
 $this_section = SECTION_MYAGENDA;
 
-$htmlHeadXtra[] = api_get_jquery_libraries_js(array('jquery-ui', 'jquery-ui-i18n'));
+$htmlHeadXtra[] = api_get_jquery_libraries_js(array('jquery-ui','jquery-ui-i18n'));
 $htmlHeadXtra[] = api_get_js('qtip2/jquery.qtip.min.js');
 $htmlHeadXtra[] = api_get_js('fullcalendar/fullcalendar.min.js');
 $htmlHeadXtra[] = api_get_js('fullcalendar/gcal.js');
@@ -48,18 +49,19 @@ $group_id = api_get_group_id();
 
 if (!empty($group_id)) {
     $is_group_tutor = GroupManager::is_tutor_of_group(api_get_user_id(), $group_id);
-    $group_properties = GroupManager :: get_group_properties($group_id);
-    $interbreadcrumb[] = array("url" => "../group/group.php", "name" => get_lang('Groups'));
-    $interbreadcrumb[] = array("url" => "../group/group_space.php?gidReq=".$group_id, "name" => get_lang('GroupSpace').' '.$group_properties['name']);
+    $group_properties  = GroupManager :: get_group_properties($group_id);
+    $interbreadcrumb[] = array ("url" => "../group/group.php", "name" => get_lang('Groups'));
+    $interbreadcrumb[] = array ("url"=>"../group/group_space.php?gidReq=".$group_id, "name"=> get_lang('GroupSpace').' '.$group_properties['name']);
 }
 
-$tpl = new Template(get_lang('Agenda'));
+$app['title'] = get_lang('Agenda');
+$tpl = $app['template'];
 
 $tpl->assign('use_google_calendar', 0);
 
 $can_add_events = 0;
 
-switch ($type) {
+switch($type) {
     case 'admin':
         api_protect_admin_script();
         $this_section = SECTION_PLATFORM_ADMIN;
@@ -97,23 +99,26 @@ switch ($type) {
 
 
 //Setting translations
-$day_short = api_get_week_days_short();
-$days = api_get_week_days_long();
-$months = api_get_months_long();
-$months_short = api_get_months_short();
+$day_short 		= api_get_week_days_short();
+$days 			= api_get_week_days_long();
+$months 		= api_get_months_long();
+$months_short 	= api_get_months_short();
 
 //Setting calendar translations
 $tpl->assign('month_names', json_encode($months));
 $tpl->assign('month_names_short', json_encode($months_short));
 $tpl->assign('day_names', json_encode($days));
 $tpl->assign('day_names_short', json_encode($day_short));
-$tpl->assign('button_text',
-    json_encode(array(
-        'today' => get_lang('Today'),
-        'month' => get_lang('Month'),
-        'week' => get_lang('Week'),
-        'day' => get_lang('Day')
-    ))
+$tpl->assign(
+    'button_text',
+    json_encode(
+        array(
+            'today' => get_lang('Today'),
+            'month'	=> get_lang('Month'),
+            'week'	=> get_lang('Week'),
+            'day' => get_lang('Day')
+        )
+    )
 );
 
 //see http://docs.jquery.com/UI/Datepicker/$.datepicker.formatDate
@@ -124,7 +129,8 @@ $region_value = api_get_language_isocode();
 if ($region_value == 'en') {
     $region_value = 'en-GB';
 }
-$tpl->assign('region_value', $region_value);
+
+$tpl->assign('region_value', 	$region_value);
 
 $export_icon = '../img/export.png';
 $export_icon_low = '../img/export_low_fade.png';
@@ -133,21 +139,14 @@ $export_icon_high = '../img/export_high_fade.png';
 $tpl->assign('export_ical_confidential_icon', Display::return_icon($export_icon_high, get_lang('ExportiCalConfidential')));
 
 $actions = null;
-
-if (api_is_allowed_to_edit(false, true) OR
-    (api_get_course_setting('allow_user_edit_agenda') && !api_is_anonymous()) && api_is_allowed_to_session_edit(false, true) OR
-    $is_group_tutor
-) {
+if (api_is_allowed_to_edit(false,true) OR (api_get_course_setting('allow_user_edit_agenda') && !api_is_anonymous()) && api_is_allowed_to_session_edit(false,true) OR $is_group_tutor) {
     if ($type == 'course') {
         if (isset($_GET['user_id'])) {
             $filter = $_GET['user_id'];
         }
         $actions = display_courseadmin_links($filter);
     }
-} else {
-    if ($type == 'course') {
-        $actions = "<a href='agenda_list.php?type=course&".api_get_cidreq()."'>".Display::return_icon('week.png', get_lang('Agenda'), '', ICON_SIZE_MEDIUM)."</a>";
-    }
+	$tpl->assign('actions', $actions);
 }
 
 $tpl->assign('actions', $actions);
@@ -191,19 +190,19 @@ if (isset($_GET['user_id'])) {
     $agenda_ajax_url = api_get_path(WEB_AJAX_PATH).'agenda.ajax.php?type='.$type;
 }
 $tpl->assign('web_agenda_ajax_url', $agenda_ajax_url);
-$course_code = api_get_course_id();
 
+$course_code  = api_get_course_id();
+$select = null;
 if ((api_is_allowed_to_edit() || $is_group_tutor) && $course_code != '-1' && $type == 'course') {
     $order = 'lastname';
     if (api_is_western_name_order()) {
         $order = 'firstname';
     }
-
     if (!empty($group_id)) {
-        $group_list = array($group_id => $group_properties);
-        $user_list = GroupManager::get_subscribed_users($group_id);
+        $group_list  = array($group_id => $group_properties);
+        $user_list  = GroupManager::get_subscribed_users($group_id);
     } else {
-        $user_list = CourseManager::get_user_list_from_course_code(api_get_course_id(), api_get_session_id(), null, $order);
+        $user_list  = CourseManager::get_user_list_from_course_code(api_get_course_id(), api_get_session_id(), null, $order);
         $group_list = CourseManager::get_group_list_of_course(api_get_course_id(), api_get_session_id());
     }
 
@@ -213,10 +212,51 @@ if ((api_is_allowed_to_edit() || $is_group_tutor) && $course_code != '-1' && $ty
     $tpl->assign('visible_to', $select);
 }
 
-// Loading Agenda template
-$content = $tpl->fetch('default/agenda/month.tpl');
+$form = new FormValidator('form-simple', '', null);
+$form->addElement('label', get_lang('Date'), '<span id="simple_start_date"></span><span id="simple_end_date"></span>');
+$form->addElement('label', get_lang('Title'), '<div id="simple_title"></div>');
+$form->addElement('label', get_lang('Description'), '<div id="simple_content"></div>');
+$tpl->assign('form_simple', $form->return_form());
 
-$tpl->assign('content', $content);
 
-// Loading main Chamilo 1 col template
-$tpl->display_one_col_template();
+$form = new FormValidator('add_event_form', null, null);
+
+if (!empty($select)) {
+    $form->addElement(
+        'label',
+        get_lang('To'),
+        $select,
+        array('id' => 'visible_to_input', 'style' => 'display:none')
+    );
+}
+
+$form->addElement(
+    'label',
+    get_lang('To'),
+    '<div id="visible_to_read_only_users"></div>',
+    array('id' => 'visible_to_read_only', 'style' => 'display:none')
+);
+
+$form->addElement('label', get_lang('Agenda'), '<div id="color_calendar"></div>');
+$form->addElement('label', get_lang('Date'), '<span id="start_date"></span><span id="end_date"></span>');
+$form->addElement(
+    'label',
+    get_lang('Title'),
+    '<input type="text" name="title" id="title" size="40" /><span id="title_edit"></span>'
+);
+$form->addElement(
+    'label',
+    get_lang('Description'),
+    '<textarea name="content" id="content" class="span3" rows="5"></textarea>
+    <span id="content_edit"></span>'
+);
+
+if ($type == 'course') {
+
+    $form->addElement('html', '<div id="add_as_announcement_div">');
+    $form->addElement('checkbox', 'add_as_annonuncement', array(null, null, get_lang('AddAsAnnouncement').' ('.get_lang('SendEmail').')'));
+    $form->addElement('html', '</div>');
+}
+$tpl->assign('form_add', $form->return_form());
+
+$tpl->display('default/agenda/month.tpl');

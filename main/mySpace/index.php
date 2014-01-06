@@ -1,5 +1,6 @@
 <?php
 /* For licensing terms, see /license.txt */
+
 /**
  * Homepage for the MySpace directory
  * @package chamilo.reporting
@@ -7,22 +8,17 @@
 /**
  * code
  */
-$language_file = array('registration', 'index', 'tracking', 'admin', 'exercice');
+$language_file = array('registration', 'index', 'tracking', 'admin');
 
 // resetting the course id
 $cidReset = true;
 
-require_once '../inc/global.inc.php';
-
 // including additional libraries
-require_once api_get_path(LIBRARY_PATH).'export.lib.inc.php';
 require_once 'myspace.lib.php';
 
 $htmlHeadXtra[] = api_get_jqgrid_js();
 // the section (for the tabs)
 $this_section = SECTION_TRACKING;
-//for HTML editor repository
-unset($_SESSION['this_section']);
 
 ob_start();
 
@@ -31,10 +27,9 @@ $display 	 = isset($_GET['display']) ? Security::remove_XSS($_GET['display']) : 
 $csv_content = array();
 $nameTools = get_lang('MySpace');
 
-$user_id = api_get_user_id();
-$is_coach = api_is_coach($_GET['session_id']); // This is used?
-
+$user_id 	 		= api_get_user_id();
 $session_id = isset($_GET['session_id']) ? intval($_GET['session_id']) : 0;
+//$is_coach = api_is_coach($session_id); // This is used?
 
 $is_platform_admin 	= api_is_platform_admin();
 $is_drh 			= api_is_drh();
@@ -46,6 +41,8 @@ $title 				= null;
 
 // Access control
 api_block_anonymous_users();
+
+$htmlHeadXtra[] = api_get_jqgrid_js();
 
 if (!$export_csv) {
     Display :: display_header($nameTools);
@@ -106,7 +103,7 @@ function rsort_sessions($a, $b) {
     }
 }
 
-/* MAIN CODE  */
+/** MAIN CODE  */
 
 if ($is_session_admin) {
     header('location:session.php');
@@ -124,18 +121,18 @@ $menu_items = array();
 global $_configuration;
 
 if ($is_platform_admin) {
-    if ($view == 'admin') {
-        $title = get_lang('CoachList');
-        $menu_items[] = Display::url(Display::return_icon('teacher.png', get_lang('TeacherInterface'), array(), ICON_SIZE_MEDIUM), api_get_self().'?view=teacher');
-        $menu_items[] = Display::url(Display::return_icon('star_na.png', get_lang('AdminInterface'), array(), ICON_SIZE_MEDIUM), api_get_self().'?view=admin');
-        $menu_items[] = Display::url(Display::return_icon('quiz.png', get_lang('ExamTracking'), array(), ICON_SIZE_MEDIUM), api_get_path(WEB_CODE_PATH).'tracking/exams.php');
-        $menu_items[] = Display::url(Display::return_icon('statistics.png', get_lang('CurrentCoursesReport'), array(), ICON_SIZE_MEDIUM), api_get_path(WEB_CODE_PATH).'mySpace/current_courses.php');
-    } else {
-        $menu_items[] = Display::url(Display::return_icon('teacher_na.png', get_lang('TeacherInterface'), array(), ICON_SIZE_MEDIUM), '');
-        $menu_items[] = Display::url(Display::return_icon('star.png', get_lang('AdminInterface'), array(), ICON_SIZE_MEDIUM), api_get_self().'?view=admin');
-        $menu_items[] = Display::url(Display::return_icon('quiz.png', get_lang('ExamTracking'), array(), ICON_SIZE_MEDIUM), api_get_path(WEB_CODE_PATH).'tracking/exams.php');
-        $menu_items[] = Display::url(Display::return_icon('statistics.png', get_lang('CurrentCoursesReport'), array(), ICON_SIZE_MEDIUM), api_get_path(WEB_CODE_PATH).'mySpace/current_courses.php');
-    }
+	if ($view == 'admin') {
+		$title = get_lang('CoachList');
+		$menu_items[] = Display::url(Display::return_icon('teacher.png', get_lang('TeacherInterface'), array(), 32), api_get_self().'?view=teacher');
+		$menu_items[] = Display::url(Display::return_icon('star_na.png', get_lang('AdminInterface'), array(), 32), api_get_self().'?view=admin');
+        $menu_items[] = Display::url(Display::return_icon('quiz.png', get_lang('ExamTracking'), array(), 32), api_get_path(WEB_CODE_PATH).'tracking/exams.php');
+        $menu_items[] = Display::url(Display::return_icon('statistics.png', get_lang('CurrentCoursesReport'), array(), 32), api_get_path(WEB_CODE_PATH).'mySpace/current_courses.php');
+	} else {
+		$menu_items[] = Display::return_icon('teacher_na.png', get_lang('TeacherInterface'), array(), 32);
+		$menu_items[] = Display::url(Display::return_icon('star.png', get_lang('AdminInterface'), array(), 32), api_get_self().'?view=admin');
+        $menu_items[] = Display::url(Display::return_icon('quiz.png', get_lang('ExamTracking'), array(), 32), api_get_path(WEB_CODE_PATH).'tracking/exams.php');
+        $menu_items[] = Display::url(Display::return_icon('statistics.png', get_lang('CurrentCoursesReport'), array(), 32), api_get_path(WEB_CODE_PATH).'mySpace/current_courses.php');
+	}
 }
 
 if ($is_drh) {
@@ -152,287 +149,231 @@ echo '<div id="actions" class="actions">';
 echo '<span style="float:right">';
 
 if ($display == 'useroverview' || $display == 'sessionoverview' || $display == 'courseoverview') {
-    echo '<a href="'.api_get_self().'?display='.$display.'&export=csv&view='.$view.'">';
-    echo Display::return_icon("export_csv.png", get_lang('ExportAsCSV'), array(), 32);
+	echo '<a href="'.api_get_self().'?display='.$display.'&export=csv&view='.$view.'">';
+    echo Display::return_icon("export_csv.png", get_lang('ExportAsCSV'),array(), 32);
     echo '</a>';
 }
 echo '<a href="javascript: void(0);" onclick="javascript: window.print()">'.
     Display::return_icon('printer.png', get_lang('Print'),'',ICON_SIZE_MEDIUM).'</a>';
 echo '</span>';
 
-if (!empty($session_id) && !in_array($display, array('accessoverview','lpprogressoverview','progressoverview','exerciseprogress', 'surveyoverview'))) {
-    echo '<a href="index.php">'.Display::return_icon('back.png', get_lang('Back'),'',ICON_SIZE_MEDIUM).'</a>';
-    if (!api_is_platform_admin()) {
-        if (api_get_setting('add_users_by_coach') == 'true') {
-            if ($is_coach) {
-                echo "<div align=\"right\">";
-                echo '<a href="user_import.php?id_session='.$session_id.'&action=export&amp;type=xml">'.
-                        Display::return_icon('excel.gif', get_lang('ImportUserList')).'&nbsp;'.get_lang('ImportUserList').'</a>';
-                echo "</div><br />";
-            }
-        }
-    } else {
-        echo "<div align=\"right\">";
-        echo '<a href="user_import.php?id_session='.$session_id.'&action=export&amp;type=xml">'.
-                Display::return_icon('excel.gif', get_lang('ImportUserList')).'&nbsp;'.get_lang('ImportUserList').'</a>';
-        echo "</div><br />";
-    }
+if (!empty($session_id)) {
+	echo '<a href="index.php">'.Display::return_icon('back.png', get_lang('Back'),'',ICON_SIZE_MEDIUM).'</a>';
 } else {
-	echo Display::url(Display::return_icon('stats.png', get_lang('MyStats'),'',ICON_SIZE_MEDIUM),api_get_path(WEB_CODE_PATH)."auth/my_progress.php");
+	echo Display::url(Display::return_icon('stats.png', get_lang('MyStats'),'',ICON_SIZE_MEDIUM),api_get_path(WEB_CODE_PATH)."auth/my_progress.php" );
 }
 
 // Actions menu
 $nb_menu_items = count($menu_items);
-if (empty($session_id) || in_array($display, array('accessoverview','lpprogressoverview', 'progressoverview', 'exerciseprogress', 'surveyoverview'))) {
-    if ($nb_menu_items > 1) {
-        foreach ($menu_items as $key => $item) {
-            echo $item;
-        }
-    }
+if (empty($session_id)) {
+	if ($nb_menu_items > 1) {
+    	foreach ($menu_items as $key => $item) {
+	    	echo $item;
+		}
+	}
 }
-
 echo '</div>';
+$sessions = array();
 
 if (empty($session_id)) {
 
 	// Getting courses followed by a coach (No session courses)
-    $courses  = CourseManager::get_course_list_as_coach($user_id, false);
+	$courses = CourseManager::get_course_list_as_coach($user_id, false);
 
-    if (isset($courses[0])) {
-        $courses = $courses[0];
-    }
+	if (isset($courses[0])) {
+		$courses = $courses[0];
+	}
 
-    // Getting students from courses and courses in sessions (To show the total students that the user follows)
-    $students = CourseManager::get_user_list_from_courses_as_coach($user_id);
+	//Getting students from courses and courses in sessions (To show the total students that the user follows)
+	$students 		= CourseManager::get_user_list_from_courses_as_coach($user_id);
 
-    // If is drh
-    if ($is_drh) {
-        if (api_drh_can_access_all_session_content()) {
-            $studentList = SessionManager::getAllUsersFromCoursesFromAllSessionFromStatus('drh_all', api_get_user_id());
+	// Sessions for the coach
+	$sessions 	 	= SessionManager::get_sessions_coached_by_user($user_id);
 
-            $students = array();
-            foreach ($studentList as $studentData) {
-                $students[] = $studentData['user_id'];
-            }
-            $courses_of_the_platform = SessionManager::getAllCoursesFromAllSessionFromDrh(api_get_user_id());
+	//If is drh
 
-            foreach ($courses_of_the_platform as $course) {
-                $courses[$course] = $course;
-            }
-            $sessions = SessionManager::get_sessions_followed_by_drh(api_get_user_id());
+	if ($is_drh) {
+		$students = array_keys(UserManager::get_users_followed_by_drh($user_id, STUDENT));
+		$courses_of_the_platform = CourseManager :: get_courses_followed_by_drh($user_id);
 
-        } else {
-            $students = array_keys(UserManager::get_users_followed_by_drh($user_id, STUDENT));
-            $courses_of_the_platform = CourseManager::get_courses_followed_by_drh($user_id);
-            foreach ($courses_of_the_platform as $course) {
-                $courses[$course['code']] = $course['code'];
-            }
-            $sessions = SessionManager::get_sessions_followed_by_drh($user_id);
-        }
-    } else {
-        // Sessions for the coach
-        $sessions = Tracking::get_sessions_coached_by_user($user_id);
-    }
+		foreach ($courses_of_the_platform as $course) {
+			$courses[$course['real_id']] = $course['real_id'];
+		}
+        $sessions = SessionManager::get_sessions_followed_by_drh($user_id);
+	}
 
-    // Courses for the user
-    $count_courses = count($courses);
+	//Courses for the user
+	$count_courses = count($courses);
 
-    // Sessions for the user
-    $count_sessions = count($sessions);
+	//Sessions for the user
+	$count_sessions = count($sessions);
 
-    // Students
-    $nb_students = count($students);
+	//Students
+	$nb_students = count($students);
 
-    $total_time_spent 			= 0;
-    $total_courses 				= 0;
-    $avg_total_progress 		= 0;
-    $avg_results_to_exercises 	= 0;
-    $nb_inactive_students 		= 0;
-    $nb_posts = $nb_assignments = 0;
+	$total_time_spent 			= 0;
+	$total_courses 				= 0;
+	$avg_total_progress 		= 0;
+	$avg_results_to_exercises 	= 0;
+	$nb_inactive_students 		= 0;
+	$nb_posts = $nb_assignments = 0;
 
-    if (!empty($students)) {
-        foreach ($students as $student_id) {
-            // inactive students
-            $last_connection_date = Tracking::get_last_connection_date($student_id, true, true);
+	if (!empty($students))
+	foreach ($students as $student_id) {
+		// inactive students
+		$last_connection_date = Tracking :: get_last_connection_date($student_id, true, true);
+		if ($last_connection_date !== false) {
+			if (time() - (3600 * 24 * 7) > $last_connection_date) {
+				$nb_inactive_students++;
+			}
+		} else {
+			$nb_inactive_students++;
+		}
 
-            if ($last_connection_date !== false) {
-                if (time() - (3600 * 24 * 7) > $last_connection_date) {
-                    $nb_inactive_students++;
-                }
-            } else {
-                $nb_inactive_students++;
-            }
+		$total_time_spent += Tracking :: get_time_spent_on_the_platform($student_id);
+		$total_courses += Tracking :: count_course_per_student($student_id);
+		$avg_student_progress   = 0;
+        $avg_student_score      = 0;
+		$nb_courses_student     = 0;
+		foreach ($courses as $courseId) {
+			if (CourseManager :: is_user_subscribed_in_course($student_id, $courseId, true)) {
+				$nb_courses_student++;
+				$nb_posts 			   += Tracking :: count_student_messages($student_id, $courseId);
+				$nb_assignments 	   += Tracking :: count_student_assignments($student_id, $courseId);
+				$avg_student_progress  += Tracking :: get_avg_student_progress($student_id, $courseId);
+				$myavg_temp 			= Tracking :: get_avg_student_score($student_id, $courseId);
 
-            $total_time_spent += Tracking::get_time_spent_on_the_platform($student_id);
-            $total_courses += Tracking::count_course_per_student($student_id);
-            $avg_student_progress   = 0;
-            $avg_student_score      = 0;
-            $nb_courses_student     = 0;
+				 if (is_numeric($myavg_temp))
+				 	$avg_student_score += $myavg_temp;
 
-            foreach ($courses as $course_code) {
-                if (CourseManager :: is_user_subscribed_in_course($student_id, $course_code, true)) {
-                    $nb_courses_student++;
-                    $nb_posts 			   += Tracking :: count_student_messages($student_id, $course_code);
-                    $nb_assignments 	   += Tracking :: count_student_assignments($student_id, $course_code);
-                    $avg_student_progress  += Tracking :: get_avg_student_progress($student_id, $course_code);
-                    $myavg_temp 			= Tracking :: get_avg_student_score($student_id, $course_code);
+				if ($nb_posts !== null && $nb_assignments !== null && $avg_student_progress !== null && $avg_student_score !== null) {
+					//if one of these scores is null, it means that we had a problem connecting to the right database, so don't count it in
+					$nb_courses_student++;
+				}
+			}
+		}
+		// average progress of the student
+		$avg_student_progress = $nb_courses_student ? $avg_student_progress / $nb_courses_student:0;
+		$avg_total_progress += $avg_student_progress;
 
-                    if (is_numeric($myavg_temp)) {
-                        $avg_student_score += $myavg_temp;
-                    }
+		// average test results of the student
+		$avg_student_score = $avg_student_score ? $avg_student_score / $nb_courses_student:0;
+		$avg_results_to_exercises += $avg_student_score;
+	}
 
-                    if ($nb_posts !== null && $nb_assignments !== null && $avg_student_progress !== null && $avg_student_score !== null) {
-                        //if one of these scores is null, it means that we had a problem connecting to the right database, so don't count it in
-                        $nb_courses_student++;
-                    }
-                }
-            }
+	if ($nb_students > 0 && $view != 'admin') {
 
-            // average progress of the student
-            $avg_student_progress = $nb_courses_student ?$avg_student_progress / $nb_courses_student:0;
-            $avg_total_progress += $avg_student_progress;
-
-            // average test results of the student
-            $avg_student_score = $avg_student_score?$avg_student_score / $nb_courses_student:0;
-            $avg_results_to_exercises += $avg_student_score;
-        }
-    }
-
-    if ($nb_students > 0 && $view != 'admin') {
-
-        // average progress
-        $avg_total_progress = $avg_total_progress / $nb_students;
-        // average results to the tests
-        $avg_results_to_exercises = $avg_results_to_exercises / $nb_students;
-        // average courses by student
-        $avg_courses_per_student = round($count_courses / $nb_students, 2);
-        // average time spent on the platform
-        $avg_time_spent = $total_time_spent / $nb_students;
-        // average assignments
-        $nb_assignments = $nb_assignments / $nb_students;
-        // average posts
-        $nb_posts = $nb_posts / $nb_students;
+		// average progress
+		$avg_total_progress = $avg_total_progress / $nb_students;
+		// average results to the tests
+		$avg_results_to_exercises = $avg_results_to_exercises / $nb_students;
+		// average courses by student
+		$avg_courses_per_student = round($count_courses / $nb_students, 2);
+		// average time spent on the platform
+		$avg_time_spent = $total_time_spent / $nb_students;
+		// average assignments
+		$nb_assignments = $nb_assignments / $nb_students;
+		// average posts
+		$nb_posts = $nb_posts / $nb_students;
 
         echo Display::page_subheader('<img src="'.api_get_path(WEB_IMG_PATH).'teachers.gif">&nbsp;'.get_lang('Overview'));
 
         echo '<div class="report_section">
-                    <table class="table table-bordered">
-                        <tr>
-                            <td>'.get_lang('FollowedUsers').'</td>
-                            <td align="right">'.$nb_students.'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('FollowedCourses').'</td>
-                            <td align="right">'.$count_courses.'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('FollowedSessions').'</td>
-                            <td align="right">'.$count_sessions.'</td>
-                        </tr>
-                        </table>';
+                <table class="table table-bordered">
+                <tr>
+                    <td>'.get_lang('FollowedUsers').'</td>
+                    <td align="right">'.$nb_students.'</td>
+                </tr>
+                <tr>
+                    <td>'.get_lang('FollowedCourses').'</td>
+                    <td align="right">'.$count_courses.'</td>
+                </tr>
+                <tr>
+                    <td>'.get_lang('FollowedSessions').'</td>
+                    <td align="right">'.$count_sessions.'</td>
+                </tr>
+                </table>';
         echo '</div>';
 
-        echo Display::page_subheader(Display::return_icon('students.gif').'&nbsp;'.get_lang('Students').' ('.$nb_students.')');
+		echo Display::page_subheader('<img src="'.api_get_path(WEB_IMG_PATH).'students.gif">&nbsp;'.get_lang('Students').' ('.$nb_students.')');
 
-        if ($export_csv) {
-            //csv part
-            $csv_content[] = array(get_lang('Students', ''));
-            $csv_content[] = array(get_lang('InactivesStudents', ''), $nb_inactive_students );
-            $csv_content[] = array(get_lang('AverageTimeSpentOnThePlatform', ''), $avg_time_spent);
-            $csv_content[] = array(get_lang('AverageCoursePerStudent', ''), $avg_courses_per_student);
-            $csv_content[] = array(get_lang('AverageProgressInLearnpath', ''), is_null($avg_total_progress) ? null : round($avg_total_progress, 2).'%');
-            $csv_content[] = array(get_lang('AverageResultsToTheExercices', ''), is_null($avg_results_to_exercises) ? null : round($avg_results_to_exercises, 2).'%');
-            $csv_content[] = array(get_lang('AveragePostsInForum', ''), $nb_posts);
-            $csv_content[] = array(get_lang('AverageAssignments', ''), $nb_assignments);
-            $csv_content[] = array();
-        } else {
+		if ($export_csv) {
+			//csv part
+			$csv_content[] = array(get_lang('Students', ''));
+			$csv_content[] = array(get_lang('InactivesStudents', ''), $nb_inactive_students );
+			$csv_content[] = array(get_lang('AverageTimeSpentOnThePlatform', ''), $avg_time_spent);
+			$csv_content[] = array(get_lang('AverageCoursePerStudent', ''), $avg_courses_per_student);
+			$csv_content[] = array(get_lang('AverageProgressInLearnpath', ''), is_null($avg_total_progress) ? null : round($avg_total_progress, 2).'%');
+			$csv_content[] = array(get_lang('AverageResultsToTheExercices', ''), is_null($avg_results_to_exercises) ? null : round($avg_results_to_exercises, 2).'%');
+			$csv_content[] = array(get_lang('AveragePostsInForum', ''), $nb_posts);
+			$csv_content[] = array(get_lang('AverageAssignments', ''), $nb_assignments);
+			$csv_content[] = array();
+		} else {
+			// html part
+			echo '<div class="report_section">
+					<table class="table table-bordered">
+                        <tr>
+							<td>'.get_lang('AverageCoursePerStudent').'</td>
+							<td align="right">'.(is_null($avg_courses_per_student) ? '' : $avg_courses_per_student).'</td>
+						</tr>
+                        <tr>
+							<td>'.get_lang('InactivesStudents').'</td>
+							<td align="right">'.$nb_inactive_students.'</td>
+						</tr>
 
-            $countActiveUsers = SessionManager::getCountUserTracking(null, 1);
-            $countInactiveUsers = SessionManager::getCountUserTracking(null, 0);
+						<tr>
+							<td>'.get_lang('AverageTimeSpentOnThePlatform').'</td>
+							<td align="right">'.(is_null($avg_time_spent) ? '' : api_time_to_hms($avg_time_spent)).'</td>
+						</tr>
 
-            $lastConnectionDate = api_get_utc_datetime(strtotime('15 days ago'));
-
-            $countSleepingTeachers = SessionManager::getTeacherTracking(api_get_user_id(), 1, $lastConnectionDate, true);
-            $countSleepingStudents =SessionManager::getCountUserTracking(null, 1, $lastConnectionDate);
-
-            $form = new FormValidator('search_user', 'get', api_get_path(WEB_CODE_PATH).'mySpace/student.php');
-            $form->addElement('text', 'keyword', get_lang('User'));
-            $form->addElement('button', 'submit', get_lang('Search'));
-            $form->display();
-
-            // html part
-            echo '<div class="report_section">
-                    <table class="table table-bordered">
-                        <tr>
-                            <td>'.Display::url(get_lang('ActiveUsers'), api_get_path(WEB_CODE_PATH).'mySpace/student.php?active=1').'</td>
-                            <td align="right">'.$countActiveUsers.'</td>
-                        </tr>
-
-                        <tr>
-                            <td>'.Display::url(get_lang('InactiveUsers'), api_get_path(WEB_CODE_PATH).'mySpace/student.php?active=0').'</td>
-                            <td align="right">'.$countInactiveUsers.'</td>
-                        </tr>
-
-                        <tr>
-                            <td>'.Display::url(get_lang('SleepingTeachers'), api_get_path(WEB_CODE_PATH).'mySpace/teachers.php?sleeping_days=15').'</td>
-                            <td align="right">'.$countSleepingTeachers.'</td>
-                        </tr>
-                        <tr>
-                            <td>'.Display::url(get_lang('SleepingStudents'), api_get_path(WEB_CODE_PATH).'mySpace/student.php?sleeping_days=15').'</td>
-                            <td align="right">'.$countSleepingStudents.'</td>
-                        </tr>
-
-                        <tr>
-                            <td>'.get_lang('AverageCoursePerStudent').'</td>
-                            <td align="right">'.(is_null($avg_courses_per_student) ? '' : $avg_courses_per_student).'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('InactivesStudents').'</td>
-                            <td align="right">'.$nb_inactive_students.'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('AverageTimeSpentOnThePlatform').'</td>
-                            <td align="right">'.(is_null($avg_time_spent) ? '' : api_time_to_hms($avg_time_spent)).'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('AverageProgressInLearnpath').'</td>
-                            <td align="right">'.(is_null($avg_total_progress) ? '' : round($avg_total_progress, 2).'%').'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('AvgCourseScore').'</td>
-                            <td align="right">'.(is_null($avg_results_to_exercises) ? '' : round($avg_results_to_exercises, 2).'%').'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('AveragePostsInForum').'</td>
-                            <td align="right">'.(is_null($nb_posts) ? '' : round($nb_posts, 2)).'</td>
-                        </tr>
-                        <tr>
-                            <td>'.get_lang('AverageAssignments').'</td>
-                            <td align="right">'.(is_null($nb_assignments) ? '' : round($nb_assignments, 2)).'</td>
-                        </tr>
-                    </table>
-                    <a class="btn" href="'.api_get_path(WEB_CODE_PATH).'mySpace/student.php'.'">
-                    '.get_lang('SeeStudentList').'
-                    </a>
-                 </div><br />';
-        }
-    } else {
-        $avg_total_progress = null;
-        $avg_results_to_exercises = null;
-        $avg_courses_per_student = null;
-        $avg_time_spent = null;
-        $nb_assignments = null;
-        $nb_posts = null;
-    }
+						<tr>
+							<td>'.get_lang('AverageProgressInLearnpath').'</td>
+							<td align="right">'.(is_null($avg_total_progress) ? '' : round($avg_total_progress, 2).'%').'</td>
+						</tr>
+						<tr>
+							<td>'.get_lang('AvgCourseScore').'</td>
+							<td align="right">'.(is_null($avg_results_to_exercises) ? '' : round($avg_results_to_exercises, 2).'%').'</td>
+						</tr>
+						<tr>
+							<td>'.get_lang('AveragePostsInForum').'</td>
+							<td align="right">'.(is_null($nb_posts) ? '' : round($nb_posts, 2)).'</td>
+						</tr>
+						<tr>
+							<td>'.get_lang('AverageAssignments').'</td>
+							<td align="right">'.(is_null($nb_assignments) ? '' : round($nb_assignments, 2)).'</td>
+						</tr>
+					</table>
+					<a class="btn" href="student.php">'.get_lang('SeeStudentList').'</a>
+				 </div><br />';
+		}
+	} else {
+		$avg_total_progress = null;
+		$avg_results_to_exercises = null;
+		$avg_courses_per_student = null;
+		$avg_time_spent = null;
+		$nb_assignments = null;
+		$nb_posts = null;
+	}
 } else {
-    // If is drh
+    // Sessions.
+
+    $visibility = api_get_session_visibility($session_id);
+    if ($visibility == SESSION_INVISIBLE) {
+        Display::display_warning_message(get_lang('NotAvailable'));
+        Display::display_footer();
+    }
+
+	$courses = Tracking::get_courses_followed_by_coach($user_id, $session_id);
+
+    //If is drh
 	if ($is_drh) {
-        $courses_of_the_platform = CourseManager::get_courses_followed_by_drh($user_id);
-        $courses_from_session = SessionManager::get_course_list_by_session_id($session_id);
+        $courses_of_the_platform = CourseManager :: get_courses_followed_by_drh($user_id);
 
         $courses = array();
+        $courses_from_session = SessionManager::get_course_list_by_session_id($session_id);
+
         foreach ($courses_from_session as $course_item) {
-            if (api_drh_can_access_all_session_content()) {
+            if (isset($courses_of_the_platform[$course_item['code']])) {
                 $courses[$course_item['code']] = $course_item['code'];
             } else {
                 if (isset($courses_of_the_platform[$course_item['code']])) {
@@ -444,9 +385,7 @@ if (empty($session_id)) {
         if (empty($courses)) {
             Display::display_warning_message(get_lang('NoResults'));
         }
-	} else {
-        $courses = Tracking::get_courses_followed_by_coach($user_id, $session_id);
-    }
+	}
 
     //Courses for the user
     $count_courses = count($courses);
@@ -454,9 +393,8 @@ if (empty($session_id)) {
     //Sessions for the user
 	$count_sessions = count($sessions);
 }
-
 if ($count_courses || $count_sessions) {
-	//If we are in course
+	// If we are in course.
 	if (empty($session_id)) {
 		if ($count_courses) {
 			$title = Display::return_icon('course.gif').' '.get_lang('Courses').' ('.$count_courses.') ';
@@ -471,12 +409,12 @@ if ($count_courses || $count_sessions) {
 
 if ((api_is_allowed_to_create_course() || api_is_drh()) && in_array($view, array('teacher', 'drh'))) {
 
-	// Courses
+	//Courses
 	if ($count_courses) {
-
 		echo Display::page_subheader($title);
 
-		$table = new SortableTable('courses_my_space', 'get_number_of_courses', array('MySpace','get_course_data'));
+        $data = MySpace::get_course_data(null, null, null, null, $courses, $csv_content, $charset);
+		$table = new SortableTable('courses_my_space', 'get_number_of_courses');
 		$parameters['view'] = 'teacher';
 		$parameters['class'] = 'data_table';
 		$table->set_additional_parameters($parameters);
@@ -490,6 +428,10 @@ if ((api_is_allowed_to_create_course() || api_is_drh()) && in_array($view, array
 		$table->set_header(7, get_lang('AverageAssignments'), false);
 		$table->set_header(8, get_lang('Details'), false);
 
+        foreach ($data as $row) {
+			$table->addRow($row);
+		}
+
 		$csv_content[] = array (
 			get_lang('CourseTitle', ''),
 			get_lang('NbStudents', ''),
@@ -500,45 +442,68 @@ if ((api_is_allowed_to_create_course() || api_is_drh()) && in_array($view, array
 			get_lang('AvgMessages', ''),
 			get_lang('AverageAssignments', '')
 		);
+
 		$table->display();
 	}
 
 	// Display list of sessions
 
-	if ($count_sessions > 0 && !isset($_GET['session_id'])) {
-		echo Display::page_subheader(Display::return_icon('session.png').' '.get_lang('Sessions').' ('.$count_sessions.')');
+	if ($count_sessions > 0 && empty($session_id)) {
+        $title = Display::return_icon('session.png', get_lang('Sessions'), array(), ICON_SIZE_SMALL).' '.get_lang('Sessions').' ('.$count_sessions.')';
+        echo Display::page_subheader($title);
 
-        $url = api_get_path(WEB_AJAX_PATH).'model.ajax.php?a=get_sessions_tracking';
-
-        //The order is important you need to check the the $column variable in the model.ajax.php file
         $columns = array(
             get_lang('Title'),
-            get_lang('Date'),
-            get_lang('NbCoursesPerSession'),
+            get_lang('SessionDisplayStartDate'),
+            get_lang('SessionDisplayEndDate'),
             get_lang('NbStudentPerSession'),
+            get_lang('NbCoursesPerSession'),
             get_lang('Details')
         );
 
-        // Column config
-        $columnModel   = array(
-            array('name'=>'name',               'index'=>'name',        'width'=>'255',   'align'=>'left'),
-            array('name'=>'date',                'index'=>'date', 'width'=>'150',  'align'=>'left','sortable'=>'false'),
-            array('name'=>'course_per_session',  'index'=>'course_per_session',     'width'=>'150','sortable'=>'false'),
-            array('name'=>'student_per_session', 'index'=>'student_per_session',     'width'=>'100','sortable'=>'false'),
-            array('name'=>'details',             'index'=>'details',     'width'=>'100','sortable'=>'false'),
+        //'formatter'=>'action_formatter',
+        $column_model = array (
+            array('name'=>'name',                'index'=>'name',               'width'=>'120',  'align'=>'left', 'search' => 'true', 'searchoptions' => array()),
+            array('name'=>'display_start_date',  'index'=>'display_start_date', 'width'=>'70',   'align'=>'left', 'search' => 'true', 'searchoptions' => array(), 'sorttype' => 'date'),
+            array('name'=>'display_end_date',    'index'=>'display_end_date',   'width'=>'70',   'align'=>'left', 'search' => 'true', 'searchoptions' => array(), 'sorttype' => 'date'),
+            array('name'=>'number_student_per_session',  'index'=>'number_student_per_session', 'width'=>'70',   'align'=>'left', 'search' => 'true', 'searchoptions' => array(), 'sorttype' => 'numeric'),
+            array('name'=>'courses_per_session', 'index'=>'courses_per_session','width'=>'70',   'align'=>'left', 'search' => 'false', 'searchoptions' => array(), 'sorttype' => 'numeric'),
+            array('name'=>'details',        'index'=>'details', 'width'=>'80',  'align'=>'left', 'sortable'=>'false', 'search' => 'false'),
         );
 
-        $extraParams = array(
-            'autowidth' => 'true',
-            'height' => 'auto'
-        );
+        //Autowidth
+        $extra_params['autowidth'] = 'true';
 
-        $js = '<script>
-        $(function() {
-            '.Display::grid_js('session_tracking', $url, $columns, $columnModel, $extraParams, array(), null, true).'
-        });
-        </script>';
+        //height auto
+        $extra_params['height'] = 'auto';
+        $extra_params['sortname'] = 'display_start_date';
+        $extra_params['sortorder'] = 'desc';
+        $all_data = array();
 
+		foreach ($sessions as $session) {
+            $visibility = api_get_session_visibility($session['id']);
+			$count_courses_in_session = count(Tracking::get_courses_followed_by_coach($user_id, $session['id']));
+            $count_users_in_session = count(SessionManager::get_users_by_session($session['id'], 0));
+			$row = array();
+			$row['name'] = $session['name'];
+            $row['display_start_date'] = api_get_local_time($session['display_start_date'], null, null, true);
+            $row['display_end_date'] = api_get_local_time($session['display_end_date'], null, null, true);
+            $row['number_student_per_session'] = $count_courses_in_session;
+            $row['courses_per_session'] = $count_users_in_session;
+
+            if ($visibility == SESSION_INVISIBLE) {
+                $row['details'] = '<img src="'.api_get_path(WEB_IMG_PATH).'2rightarrow_na.gif" />';
+            } else {
+                $row['details'] = '<a href="'.api_get_self().'?session_id='.$session['id'].'"><img src="'.api_get_path(WEB_IMG_PATH).'2rightarrow.gif" border="0" /></a>';
+            }
+			$all_data[] = $row;
+		}
+
+        echo "<script>
+            $(function() {
+                ".Display::grid_js('sessions', null, $columns, $column_model, $extra_params, $all_data)."
+            });
+            </script>";
 		$nb_sessions_past = $nb_sessions_current = 0;
 		$courses = array();
 
@@ -583,12 +548,16 @@ if ((api_is_allowed_to_create_course() || api_is_drh()) && in_array($view, array
 				</table>
 			</div>';
 		}
-        echo $js;
-        echo Display::grid_html('session_tracking');
-    }
+
+        echo Display::grid_html('sessions');
+
+        /*  End session overview */
+	}
 }
 
 if ($is_platform_admin && in_array($view, array('admin')) && $display != 'yourstudents') {
+
+if ($is_platform_admin && $view == 'admin' && $display != 'yourstudents') {
 
 	echo '<a href="'.api_get_self().'?view=admin&amp;display=coaches">'.get_lang('DisplayCoaches').'</a> | ';
 	echo '<a href="'.api_get_self().'?view=admin&amp;display=useroverview">'.get_lang('DisplayUserOverview').'</a>';
@@ -596,14 +565,11 @@ if ($is_platform_admin && in_array($view, array('admin')) && $display != 'yourst
 		echo ' ( <a href="'.api_get_self().'?view=admin&amp;display=useroverview&amp;export=options">'.get_lang('ExportUserOverviewOptions').'</a> )';
 	}
 	echo ' | <a href="'.api_get_self().'?view=admin&amp;display=sessionoverview">'.get_lang('DisplaySessionOverview').'</a>';
-	echo ' | <a href="'.api_get_self().'?view=admin&amp;display=accessoverview">'.get_lang('DisplayAccessOverview').'</a>';
-    echo ' | <a href="'.api_get_self().'?view=admin&amp;display=surveyoverview">'.get_lang('DisplaySurveyOverview').'</a>';
-    echo ' | <a href="'.api_get_self().'?view=admin&amp;display=lpprogressoverview">'.get_lang('DisplayLpProgressOverview').'</a>';
-    echo ' | <a href="'.api_get_self().'?view=admin&amp;display=progressoverview">'.get_lang('DisplayProgressOverview').'</a>';
-    echo ' | <a href="'.api_get_self().'?view=admin&amp;display=exerciseprogress">'.get_lang('DisplayExerciseProgress').'</a>';
 	echo ' | <a href="'.api_get_self().'?view=admin&amp;display=courseoverview">'.get_lang('DisplayCourseOverview').'</a>';
     echo ' | <a href="'.api_get_path(WEB_CODE_PATH).'tracking/question_course_report.php?view=admin">'.get_lang('LPQuestionListResults').'</a>';
     echo ' | <a href="'.api_get_path(WEB_CODE_PATH).'tracking/course_session_report.php?view=admin">'.get_lang('LPExerciseResultsBySession').'</a>';
+
+
 	echo '<br /><br />';
 
     if ($is_platform_admin && $view == 'admin' && in_array($display, array('accessoverview','lpprogressoverview', 'progressoverview', 'exerciseprogress', 'surveyoverview'))) {
@@ -1007,11 +973,13 @@ if ($is_platform_admin && in_array($view, array('admin')) && $display != 'yourst
 			);
 		}
 
-		$tbl_track_login = Database :: get_statistic_table(TABLE_STATISTIC_TRACK_E_LOGIN);
+		$tbl_track_login = Database :: get_main_table(TABLE_STATISTIC_TRACK_E_LOGIN);
 
 		$sqlCoachs = "SELECT DISTINCT scu.id_user as id_coach, user_id, lastname, firstname, MAX(login_date) as login_date
 			FROM $tbl_user, $tbl_session_course_user scu, $tbl_track_login
-			WHERE scu.id_user=user_id AND scu.status=2  AND login_user_id=user_id
+			WHERE scu.id_user=user_id AND
+			      scu.status=2  AND
+			      login_user_id=user_id
 			GROUP BY user_id ";
 
 		if ($_configuration['multiple_access_urls']) {

@@ -12,8 +12,6 @@ $language_file = array('registration', 'tracking', 'exercice', 'admin', 'learnpa
 
 $cidReset = true;
 require_once '../inc/global.inc.php';
-require_once api_get_path(SYS_CODE_PATH).'newscorm/learnpath.class.php';
-require_once api_get_path(SYS_CODE_PATH).'exercice/exercise.lib.php';
 
 $this_section = SECTION_TRACKING;
 
@@ -23,8 +21,7 @@ api_block_anonymous_users();
 
 $htmlHeadXtra[] = api_get_js('jquery.timelinr-0.9.5.js');
 
-$htmlHeadXtra[] = '
-<script language="javascript">
+$htmlHeadXtra[] = '<script>
 $(function() {
     $().timelinr();
     $(".dialog").dialog("destroy");
@@ -67,21 +64,24 @@ if (!empty($course_user_list)) {
         if ($count == $last_item) {
             $last = '<a href="#'.$login.'">'.get_lang('Last').'</a>';
         }
-        $course_info = api_get_course_info($result['course_code']);
+        $course_info = api_get_course_info_by_id($result['real_id']);
         $course_image = '<img src="'.$course_info['course_image'].'">';
         $dates .= '<li><a href="#'.$login.'">'.api_get_utc_datetime($login).'</a></li>';
         $issues .= '<li id ="'.$login.'">
                         <div class="row">
                             <div class="span2"><div class="thumbnail">'.$course_image.'</div>
                         </div>
-                        <div class="span3">'.sprintf(get_lang('YouHaveEnteredTheCourseXInY'), $result['course_code'], api_convert_and_format_date($login, DATE_FORMAT_LONG)).'</div>
+                        <div class="span3">'.sprintf(get_lang('YouHaveEnteredTheCourseXInY'), $course_info['code'], api_convert_and_format_date($login, DATE_FORMAT_LONG)).'</div>
                     </li>';
         $count++;
     }
 }
 
-$content .= Tracking::show_user_progress(api_get_user_id());
-$content .= Tracking::show_course_detail(api_get_user_id(), $_GET['course'], $_GET['session_id']);
+$selectedCourse = isset($_GET['course']) ? $_GET['course'] : null;
+$selectedSession = isset($_GET['session_id']) ? $_GET['session_id'] : null;
+
+$content = Tracking::show_user_progress(api_get_user_id());
+$content .= Tracking::show_course_detail(api_get_user_id(), $selectedCourse, $selectedSession);
 
 if (!empty($dates)) {
     if (!empty($content)) {
@@ -103,12 +103,13 @@ if (!empty($dates)) {
     </ul>
     </div></div>';
 }
-
+$message = null;
 if (empty($content)) {
     $message = Display::return_message(get_lang('NoDataAvailable'), 'warning');
 }
 
-$tpl = new Template($tool_name);
+//$app['title'] = $tool_name;
+$tpl = $app['template'];
 
 $tpl->assign('message', $message);
 $tpl->assign('content', $content);

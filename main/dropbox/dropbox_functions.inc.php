@@ -626,10 +626,8 @@ function getLoginFromId($id)
 */
 function isCourseMember($user_id)
 {
-    $_course = api_get_course_info();
-	$course_code = $_course['code'];
-	$is_course_member = CourseManager::is_user_subscribed_in_course($user_id, $course_code, true);
-	return $is_course_member;
+    $courseId = api_get_course_int_id();
+	return CourseManager::is_user_subscribed_in_course($user_id, $courseId, true);
 }
 
 /**
@@ -809,21 +807,21 @@ function store_add_dropbox()
 		return get_lang('TheFileIsNotUploaded');
 	}
 
-    $upload_ok = process_uploaded_file($_FILES['file'], true);
+    $upload_ok = FileManager::process_uploaded_file($_FILES['file'], true);
 
     if (!$upload_ok) {
         return null;
     }
 
 	// Try to add an extension to the file if it hasn't got one
-	$dropbox_filename = add_ext_on_mime($dropbox_filename, $dropbox_filetype);
+	$dropbox_filename = FileManager::add_ext_on_mime($dropbox_filename, $dropbox_filetype);
 	// Replace dangerous characters
-	$dropbox_filename = replace_dangerous_char($dropbox_filename);
+	$dropbox_filename = api_replace_dangerous_char($dropbox_filename);
 	// Transform any .php file in .phps fo security
-	$dropbox_filename = php2phps($dropbox_filename);
+	$dropbox_filename = FileManager::php2phps($dropbox_filename);
 
 	//filter extension
-    if (!filter_extension($dropbox_filename)) {
+    if (!FileManager::filter_extension($dropbox_filename)) {
     	return get_lang('UplUnableToSaveFileFilteredExtension');
     }
 
@@ -1203,7 +1201,7 @@ function get_last_tool_access($tool, $course_code = '', $user_id='')
 {
 	// The default values of the parameters
 	if (empty($course_code)) {
-        $course_code = api_get_course_id();
+        $course_code = api_get_course_int_id();
 	}
 	if (empty($user_id)) {
 		$user_id = api_get_user_id();
@@ -1215,7 +1213,7 @@ function get_last_tool_access($tool, $course_code = '', $user_id='')
 	$sql = "SELECT access_date FROM $table_last_access
 	        WHERE
 	            access_user_id='".Database::escape_string($user_id)."' AND
-	            access_cours_code='".Database::escape_string($course_code)."' AND
+	            c_id ='".Database::escape_string($course_code)."' AND
 	            access_tool='".Database::escape_string($tool)."'
 				ORDER BY access_date DESC
 				LIMIT 1";

@@ -61,6 +61,7 @@ function addlinkcategory($type)
 	$ok = true;
 
     $course_id = api_get_course_int_id();
+    $courseInfo = api_get_course_info();
 
 	if ($type == 'link') {
 		$tbl_link = Database :: get_course_table(TABLE_LINK);
@@ -121,7 +122,7 @@ function addlinkcategory($type)
 			$link_id = Database :: insert_id();
 
             if ($link_id) {
-                api_set_default_visibility($link_id, TOOL_LINK);
+                api_set_default_visibility($courseInfo, $link_id, TOOL_LINK);
             }
 
 			if ((api_get_setting('search_enabled') == 'true') && $link_id && extension_loaded('xapian')) {
@@ -229,7 +230,7 @@ function addlinkcategory($type)
 	// "WHAT'S NEW" notification : update last tool Edit.
 	if ($type == 'link') {
 		global $_user;
-		global $_course;
+        $_course = api_get_course_info();
 		global $nameTools;
 		api_item_property_update($_course, TOOL_LINK, $link_id, 'LinkAdded', $_user['user_id']);
 	}
@@ -240,43 +241,37 @@ function addlinkcategory($type)
  * Used to delete a link or a category
  * @author Patrick Cool <patrick.cool@UGent.be>, Ghent University
  */
-function deletelinkcategory($type)
+function deletelinkcategory($id, $type)
 {
 	global $catlinkstatus;
-	global $_course;
+    $_course = api_get_course_info();
+    $course_id = api_get_course_int_id();
 	$tbl_link              = Database :: get_course_table(TABLE_LINK);
 	$tbl_categories        = Database :: get_course_table(TABLE_LINK_CATEGORY);
-	$TABLE_ITEM_PROPERTY   = Database :: get_course_table(TABLE_ITEM_PROPERTY);
 
-    $course_id = api_get_course_int_id();
 
+    $id = intval($id);
 	if ($type == 'link') {
-		global $id;
 		// -> Items are no longer fysically deleted, but the visibility is set to 2 (in item_property).
 		// This will make a restore function possible for the platform administrator.
-		if (isset ($_GET['id']) && $_GET['id'] == strval(intval($_GET['id']))) {
-			$sql = "UPDATE $tbl_link SET on_homepage='0' WHERE c_id = $course_id AND id='" . intval($_GET['id']) . "'";
-			Database :: query($sql);
-		}
+
+        $sql = "UPDATE $tbl_link SET on_homepage='0' WHERE c_id = $course_id AND id='" . $id . "'";
+        Database :: query($sql);
+
 		api_item_property_update($_course, TOOL_LINK, $id, 'delete', api_get_user_id());
 		delete_link_from_search_engine(api_get_course_id(), $id);
 		$catlinkstatus = get_lang('LinkDeleted');
-		unset ($id);
 		Display :: display_confirmation_message(get_lang('LinkDeleted'));
 	}
 
 	if ($type == 'category') {
-		global $id;
-		if (isset ($_GET['id']) && !empty ($_GET['id'])) {
-			// First we delete the category itself and afterwards all the links of this category.
-			$sql = "DELETE FROM " . $tbl_categories . " WHERE c_id = $course_id AND id='" . intval($_GET['id']) . "'";
-			Database :: query($sql);
-			$sql = "DELETE FROM " . $tbl_link . " WHERE c_id = $course_id AND category_id='" . intval($_GET['id']) . "'";
-			$catlinkstatus = get_lang('CategoryDeleted');
-			unset ($id);
-			Database :: query($sql);
-			Display :: display_confirmation_message(get_lang('CategoryDeleted'));
-		}
+        // First we delete the category itself and afterwards all the links of this category.
+        $sql = "DELETE FROM " . $tbl_categories . " WHERE c_id = $course_id AND id='" .$id. "'";
+        Database :: query($sql);
+        $sql = "DELETE FROM " . $tbl_link . " WHERE c_id = $course_id AND category_id='" .$id. "'";
+        $catlinkstatus = get_lang('CategoryDeleted');
+        Database :: query($sql);
+        Display :: display_confirmation_message(get_lang('CategoryDeleted'));
 	}
 }
 
@@ -343,13 +338,12 @@ function get_link_info($id)
  */
 function editlinkcategory($type)
 {
-
 	global $catlinkstatus;
 	global $id;
 	global $submit_link;
 	global $submit_category;
 	global $_user;
-	global $_course;
+    $_course = api_get_course_info();
 	global $nameTools;
 	global $urllink;
 	global $title;
@@ -585,7 +579,8 @@ function makedefaultviewcode($locatie) {
  * @author Patrick Cool <patrick.cool@UGent.be>, Ghent University
  */
 function change_visibility($id, $scope) {
-	global $_course, $_user;
+	global $_user;
+    $_course = api_get_course_info();
 	if ($scope == 'link') {
 		api_item_property_update($_course, TOOL_LINK, $id, $_GET['action'], $_user['user_id']);
 		Display :: display_confirmation_message(get_lang('VisibilityChanged'));
@@ -636,12 +631,14 @@ function showlinksofcategory($catid) {
 			    $link_validator  = ''.Display::url(Display::return_icon('preview_view.png', get_lang('CheckURL'), array(), 16), '#', array('onclick'=>"check_url('".$myrow['id']."', '".addslashes($myrow['url'])."');"));
 			    $link_validator .= Display::span('', array('id'=>'url_id_'.$myrow['id']));
 			}
+            $icon = Display::return_icon('link.gif', get_lang('Link'));
 
     		if ($myrow['visibility'] == '1') {
     			echo '<tr class="'.$css_class.'">';
     			echo '<td align="center" valign="middle" width="15">';
     			echo '<a href="link_goto.php?'.api_get_cidreq().'&amp;link_id='.$myrow['id'].'&amp;link_url='.urlencode($myrow['url']).'" target="_blank">
-    			         <img src="../../main/img/link.gif" border="0" alt="'.get_lang('Link').'"/></a></td>
+    			        '.$icon.'
+    			         </a></td>
     			         <td width="80%" valign="top"><a href="link_goto.php?'.api_get_cidreq().'&amp;link_id='.$myrow['id'].'&amp;link_url='.urlencode($myrow['url']).'" target="'.$myrow['target'].'">';
     			echo Security :: remove_XSS($myrow['title']);
     			echo '</a>';
@@ -863,7 +860,8 @@ function put_link($url, $cat, $title, $description, $on_homepage, $hidden) {
 		$ipu = 'LinkAdded';
 		$rv = 2; // 2 = new
 	}
-	global $_course, $nameTools, $_user;
+	global $nameTools, $_user;
+    $_course = api_get_course_info();
 	api_item_property_update($_course, TOOL_LINK, $id, $ipu, $_user['user_id']);
 
 	if ($hidden && $ipu == 'LinkAdded') {
@@ -952,7 +950,7 @@ function import_csvfile()
 
 				// Modified by Ivan Tcholakov, 01-FEB-2010.
 				//while (($data = fgetcsv($myFile, 32768, $listsep))) {
-				while (($data = api_fgetcsv($myFile, null, $listsep))) {
+				while (($data = Text::api_fgetcsv($myFile, null, $listsep))) {
 					//
 					foreach ($data as $i => & $text) {
 						$linkdata[$columns[$i]] = $text;

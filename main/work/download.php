@@ -13,6 +13,8 @@ require_once '../inc/global.inc.php';
 require_once 'work.lib.php';
 
 $current_course_tool  = TOOL_STUDENTPUBLICATION;
+
+$current_course_tool  = TOOL_STUDENTPUBLICATION;
 $this_section = SECTION_COURSES;
 
 // Course protection
@@ -29,8 +31,7 @@ if (empty($course_info)) {
 $tbl_student_publication = Database::get_course_table(TABLE_STUDENT_PUBLICATION);
 
 if (!empty($course_info['real_id'])) {
-    $sql = 'SELECT * FROM '.$tbl_student_publication.'
-            WHERE c_id = '.$course_info['real_id'].' AND id = "'.$id.'"';
+    $sql = 'SELECT * FROM '.$tbl_student_publication.' WHERE c_id = '.$course_info['real_id'].' AND id = "'.$id.'"';
     $result = Database::query($sql);
     if ($result && Database::num_rows($result)) {
         $row = Database::fetch_array($result, 'ASSOC');
@@ -73,15 +74,11 @@ if (!empty($course_info['real_id'])) {
         $is_editor = api_is_allowed_to_edit(true, true, true);
         $student_is_owner_of_work = user_is_author($row['id'], $row['user_id']);
 
-        if ($is_editor || ($student_is_owner_of_work) || ($doc_visible_for_all && $work_is_visible)) {
-
-            $title = $row['title'];
-
-            if (array_key_exists('filename', $row) && !empty($row['filename'])) {
-                $title = $row['filename'];
-            }
-
-            $title = str_replace(' ', '_', $title);
+        if ($is_editor
+            //|| (!$doc_visible_for_all && $work_is_visible && $student_is_owner_of_work)
+            || ($student_is_owner_of_work)
+            || ($doc_visible_for_all && $work_is_visible)) {
+            $title = str_replace(' ', '_', $row['title']);
             event_download($title);
             if (Security::check_abs_path($full_file_name, api_get_path(SYS_COURSE_PATH).api_get_course_path().'/')) {
                 DocumentManager::file_send_for_download($full_file_name, true, $title);

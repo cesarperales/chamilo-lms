@@ -43,7 +43,7 @@ class ShibbolethSession
     function logout()
     {
         $_SESSION['_user'] = array();
-        online_logout(null, false);
+        Online::logout(null, false);
     }
 
     /**
@@ -57,8 +57,8 @@ class ShibbolethSession
         /* This must be set for local.inc.php to register correctly the global variables in session
          * This is BAD. Logic should be migrated into a function and stop relying on global variables.
          */
-        global $_uid, $is_allowedCreateCourse, $is_platformAdmin, $_real_cid, $_courseUser, $is_courseAdmin;
-        global $is_courseMember, $is_courseTutor, $is_courseCoach, $is_allowed_in_course, $is_sessionAdmin, $_gid;
+        global $_uid, $is_allowedCreateCourse, $_real_cid, $_courseUser;
+        global $is_courseMember, $is_courseTutor, $is_allowed_in_course, $_gid;
         $_uid = $uid;
 
         //is_allowedCreateCourse
@@ -87,7 +87,7 @@ class ShibbolethSession
         $uidReset = true;
 
         $gidReset = true;
-        $cidReset = false; //FALSE !!      
+        $cidReset = false; //FALSE !!
 
         $mainDbName = Database :: get_main_database();
         $includePath = api_get_path(INCLUDE_PATH);

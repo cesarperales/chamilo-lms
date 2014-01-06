@@ -11,7 +11,6 @@
 $language_file = array('document');
 
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'fileDisplay.lib.php';
 
 if (!api_is_allowed_to_edit(null, true)) {
     api_not_allowed(true);
@@ -40,15 +39,17 @@ $session = array();
 $user_name = $user_info['complete_name'];
 
 $course_list =  SessionManager::get_course_list_by_session_id ($session_id);
-$session_list = SessionManager::get_session_by_course($course_code);
+$session_list = SessionManager::get_session_by_course($course_id);
+
 $total_quota_bytes = DocumentManager::get_course_quota();
+
 $quota_bytes = DocumentManager::documents_total_space($course_id, 0 , 0);
+
 $quota_percentage = round($quota_bytes/$total_quota_bytes, 2)*100;
 
-$session[] = array(get_lang('Course').' ('.format_file_size($quota_bytes).')', $quota_percentage);
+$session[] = array(get_lang('Course').' ('.Text::format_file_size($quota_bytes).')', $quota_percentage);
 
 $used_quota_bytes = $quota_bytes;
-
 if (!empty($session_list)) {
     foreach ($session_list as $session_data) {
         $quota_percentage = 0;
@@ -60,9 +61,10 @@ if (!empty($session_list)) {
             $session_data['name'] = $session_data['name'] . ' * ';
         }
         $used_quota_bytes += $quota_bytes;
-        $session[] = array(addslashes(get_lang('Session').': '.$session_data['name']).' ('.format_file_size($quota_bytes).')', $quota_percentage);
+        $session[] = array(addslashes(get_lang('Session').': '.$session_data['name']).' ('.Text::format_file_size($quota_bytes).')', $quota_percentage);
     }
 }
+
 $group_list = GroupManager::get_groups();
 
 if (!empty($group_list)) {
@@ -77,7 +79,7 @@ if (!empty($group_list)) {
             $group_data['name'] = $group_data['name'] . ' * ';
         }
         $used_quota_bytes += $quota_bytes;
-        $session[] = array(addslashes(get_lang('Group').': '.$group_data['name']).' ('.format_file_size($quota_bytes).')', $quota_percentage);
+        $session[] = array(addslashes(get_lang('Group').': '.$group_data['name']).' ('.Text::format_file_size($quota_bytes).')', $quota_percentage);
     }
 }
 //Showing weight of documents uploaded by user
@@ -92,7 +94,7 @@ if (is_array($document_list)) {
        $quota_percentage = round($quota_bytes/$total_quota_bytes, 2)*100;
     }
 
-    $session[] = array(addslashes(get_lang('Teacher').': '.$user_name).' ('.format_file_size($quota_bytes).')', $quota_percentage);
+    $session[] = array(addslashes(get_lang('Teacher').': '.$user_name).' ('.Text::format_file_size($quota_bytes).')', $quota_percentage);
     //if a sesson is active
     if ($session_id != 0) {
         if (!empty($course_list)) {
@@ -106,12 +108,11 @@ if (is_array($document_list)) {
             }
         }
         $session[] = array(addslashes(get_lang('Teacherinsession').': '.$user_name), $quota_percentage);
-   }
+    }
 }
-
 $quota_percentage = round(($total_quota_bytes - $used_quota_bytes)/$total_quota_bytes, 2)*100;
 
-$session[] = array(addslashes(get_lang('ShowCourseQuotaUse')).' ('.format_file_size($total_quota_bytes - $used_quota_bytes).') ', $quota_percentage);
+$session[] = array(addslashes(get_lang('ShowCourseQuotaUse')).' ('.Text::format_file_size($total_quota_bytes - $used_quota_bytes).') ', $quota_percentage);
 
 $quota_data = json_encode($session);
 
@@ -135,7 +136,8 @@ $(document).ready(function(){
 });
 </script>";
 
-$tpl = new Template($tool_name);
+$app['title'] = $tool_name;
+$tpl = $app['template'];
 $content = Display::page_subheader(get_lang('ShowCourseQuotaUse')).'<div id="chart1"></div>';
 $tpl->assign('content', $content);
 $tpl->display_one_col_template();

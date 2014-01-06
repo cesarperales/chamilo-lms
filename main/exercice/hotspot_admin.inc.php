@@ -66,7 +66,7 @@ if ($modifyIn) {
     unset($buttonBack);
 }
 
-$hotspot_admin_url = api_get_path(WEB_CODE_PATH) . 'exercice/admin.php?' . api_get_cidreq() . '&exerciseId=' . $exerciseId;
+$hotspot_admin_url = api_get_path(WEB_CODE_PATH).'exercice/admin.php?'.api_get_cidreq().'&exerciseId='.$exerciseId;
 
 // the answer form has been submitted
 if ($submitAnswers || $buttonBack) {
@@ -344,14 +344,17 @@ if ($modifyAnswers) {
         $destination = array();
 
 
-        for ($i = 1; $i <= $nbrAnswers; $i++) {
-            $reponse[$i] = $objAnswer->selectAnswer($i);
+        //for ($i = 1; $i <= $nbrAnswers; $i++) {
+        $i = 1;
+        foreach ($objAnswer->answer as $answer_id =>  $answer_item) {
+            //$i = $answer_id;
+            $reponse[$i] = $objAnswer->selectAnswer($answer_id);
             if ($objExercise->selectFeedbackType() != EXERCISE_FEEDBACK_TYPE_EXAM) {
-                $comment[$i] = $objAnswer->selectComment($i);
+                $comment[$i] = $objAnswer->selectComment($answer_id);
             }
-            $weighting[$i] = $objAnswer->selectWeighting($i);
-            $hotspot_coordinates[$i] = $objAnswer->selectHotspotCoordinates($i);
-            $hotspot_type[$i] = $objAnswer->selectHotspotType($i);
+            $weighting[$i] = $objAnswer->selectWeighting($answer_id);
+            $hotspot_coordinates[$i] = $objAnswer->selectHotspotCoordinates($answer_id);
+            $hotspot_type[$i] = $objAnswer->selectHotspotType($answer_id);
 
             if ($answerType == HOT_SPOT_DELINEATION) {
                 $destination[$i] = $objAnswer->selectDestination($i);
@@ -368,6 +371,7 @@ if ($modifyAnswers) {
                 $select_question[$i] = $destination_items[3];
                 $url[$i] = $destination_items[4];
             }
+            $i++;
         }
     }
 
@@ -559,7 +563,6 @@ if ($modifyAnswers) {
 
                         </tr>
                         <?php
-                        require_once '../newscorm/learnpathList.class.php';
                         $list = new LearnpathList(api_get_user_id());
                         $flat_list = $list->get_flat_list(); //loading list of LPs
 
@@ -595,7 +598,7 @@ if ($modifyAnswers) {
                                 foreach ($question_list as $key => $questionid) {
                                     $selected = '';
                                     $question = Question::read($questionid);
-                                    $val = 'Q' . $key . ' :' . substrwords($question->selectTitle(), ICON_SIZE_SMALL);
+                                    $val = 'Q' . $key . ' :' . Text::substrwords($question->selectTitle(), ICON_SIZE_SMALL);
                                     $select_lp_id[$id] = $details['lp_name'];
                                     if ($questionid == $select_question[$i]) {
                                         $selected = 'selected="selected"';
@@ -824,19 +827,7 @@ if ($modifyAnswers) {
                                     <td valign="top" align="left">
                                         <input type="text" name="reponse[<?php echo $i; ?>]" value="<?php echo Security::remove_XSS($reponse[$i]); ?>" size="45" />
                                     </td>
-
-                                    <?php
-                                    require_once(api_get_path(LIBRARY_PATH) . "/fckeditor/fckeditor.php");
-                                    $oFCKeditor = new FCKeditor("comment[$i]");
-                                    $content = $comment[$i];
-                                    $oFCKeditor->ToolbarSet = 'TestProposedAnswer';
-                                    $oFCKeditor->Config['ToolbarStartExpanded'] = 'false';
-                                    $oFCKeditor->Width = '100%';
-                                    $oFCKeditor->Height = '100';
-                                    $oFCKeditor->Value = $content;
-                                    $return = $oFCKeditor->CreateHtml();
-                                    /* <td align="left"><textarea wrap="virtual" rows="1" cols="25" name="comment[<?php echo $i; ?>]" style="width: 100%"><?php echo api_htmlentities($comment[$i], ENT_QUOTES, api_get_system_encoding()); ?></textarea></td> */
-                                    ?>
+                                    <textarea name="<?php echo "comment[$i]"; ?>"><?php echo $content; ?></textarea>
                                     <td>&nbsp;</td>
                                     <td align="left" ><?php echo $return; ?></td>
                                         <?php
@@ -850,15 +841,15 @@ if ($modifyAnswers) {
                                             ?>
                                             <input type="hidden" name="weighting[<?php echo $i; ?>]" class="span3" value="0" />
                                 <?php } else { ?>
-                                            <input type="text" name="weighting[<?php echo $i; ?>]" class="span3" value="<?php echo (isset($weighting[$i]) ? $weighting[$i] : 10); ?>" />
+                                        <input type="text" name="weighting[<?php echo $i; ?>]" class="span3" value="<?php echo (isset($weighting[$i]) ? $weighting[$i] : 10); ?>" />
                                 <?php
                                 }
                             }
                             if ($answerType == HOT_SPOT) {
                                 ?>
-                                        <input type="text" name="weighting[<?php echo $i; ?>]" class="span3" value="<?php echo (isset($weighting[$i]) ? $weighting[$i] : 10); ?>" />
-                                        <input type="hidden" name="hotspot_coordinates[<?php echo $i; ?>]" value="<?php echo (empty($hotspot_coordinates[$i]) ? '0;0|0|0' : $hotspot_coordinates[$i]); ?>" />
-                                        <input type="hidden" name="hotspot_type[<?php echo $i; ?>]" value="<?php echo (empty($hotspot_type[$i]) ? 'square' : $hotspot_type[$i]); ?>" />
+                                <input type="text" name="weighting[<?php echo $i; ?>]" class="span3" value="<?php echo (isset($weighting[$i]) ? $weighting[$i] : 10); ?>" />
+                                <input type="hidden" name="hotspot_coordinates[<?php echo $i; ?>]" value="<?php echo (empty($hotspot_coordinates[$i]) ? '0;0|0|0' : $hotspot_coordinates[$i]); ?>" />
+                                <input type="hidden" name="hotspot_type[<?php echo $i; ?>]" value="<?php echo (empty($hotspot_type[$i]) ? 'square' : $hotspot_type[$i]); ?>" />
                                 <?php
                             }
                             ?>
@@ -866,7 +857,6 @@ if ($modifyAnswers) {
                             </tr>
                             <?php
                         }
-                        require_once '../newscorm/learnpathList.class.php';
                         $list = new LearnpathList(api_get_user_id());
                         $flat_list = $list->get_flat_list();
                         $select_lp_id = array();
@@ -888,7 +878,7 @@ if ($modifyAnswers) {
                             $option_lp = '<option value="0" selected="selected" >' . get_lang('SelectTargetLP') . '</option>' . $option_lp;
                         }
 
-                        //Feedback SELECT
+                        // Feedback SELECT
 
                         $question_list = $objExercise->selectQuestionList();
                         $option_feed = '';
@@ -896,7 +886,7 @@ if ($modifyAnswers) {
                         foreach ($question_list as $key => $questionid) {
                             $selected = '';
                             $question = Question::read($questionid);
-                            $val = 'Q' . $key . ' :' . substrwords($question->selectTitle(), ICON_SIZE_SMALL);
+                            $val = 'Q' . $key . ' :' . Text::substrwords($question->selectTitle(), ICON_SIZE_SMALL);
                             $select_lp_id[$id] = $details['lp_name'];
                             if ($questionid == $select_question_noerror) {
                                 $selected = 'selected="selected"';

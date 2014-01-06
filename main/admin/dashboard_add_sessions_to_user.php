@@ -12,7 +12,6 @@ $language_file='admin';
 $cidReset = true;
 
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'xajax/xajax.inc.php';
 global $_configuration;
 
 // create an ajax object
@@ -99,39 +98,7 @@ function search_sessions($needle,$type) {
 $xajax->processRequests();
 $htmlHeadXtra[] = $xajax->getJavascript('../inc/lib/xajax/');
 $htmlHeadXtra[] = '
-<script type="text/javascript">
-function moveItem(origin , destination) {
-	for(var i = 0 ; i<origin.options.length ; i++) {
-		if(origin.options[i].selected) {
-			destination.options[destination.length] = new Option(origin.options[i].text,origin.options[i].value);
-			origin.options[i]=null;
-			i = i-1;
-		}
-	}
-	destination.selectedIndex = -1;
-	sortOptions(destination.options);
-}
-function sortOptions(options) {
-	var newOptions = new Array();
-	for (i = 0 ; i<options.length ; i++) {
-		newOptions[i] = options[i];
-	}
-	newOptions = newOptions.sort(mysort);
-	options.length = 0;
-	for(i = 0 ; i < newOptions.length ; i++){
-		options[i] = newOptions[i];
-	}
-}
-function mysort(a, b) {
-	if (a.text.toLowerCase() > b.text.toLowerCase()) {
-		return 1;
-	}
-	if (a.text.toLowerCase() < b.text.toLowerCase()) {
-		return -1;
-	}
-	return 0;
-}
-
+<script>
 function valide() {
 	var options = document.getElementById("destination").options;
 	for (i = 0 ; i<options.length ; i++) {
@@ -197,7 +164,7 @@ if (api_is_multiple_url_enabled()) {
 				WHERE  s.name LIKE '$needle%' $without_assigned_sessions AND access_url_id = ".api_get_current_access_url_id()."
                 ORDER BY s.name";
 } else {
-    $sql 	= " SELECT s.id, s.name FROM $tbl_session s
+	$sql 	= " SELECT s.id, s.name FROM $tbl_session s
 				WHERE  s.name LIKE '$needle%' $without_assigned_sessions
                 ORDER BY s.name
                 ";

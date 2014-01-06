@@ -18,7 +18,8 @@ class ExerciseLink extends AbstractLink
     private $is_hp;
 
     // CONSTRUCTORS
-    function __construct($hp=0) {
+    function __construct($hp=0) 
+    {
     	parent::__construct();
     	$this->set_type(LINK_EXERCISE);
         $this->is_hp = $hp;
@@ -26,8 +27,6 @@ class ExerciseLink extends AbstractLink
             $this->set_type(LINK_HOTPOTATOES);
         }
     }
-    
-    
     
     // FUNCTIONS IMPLEMENTING ABSTRACTLINK
 
@@ -66,9 +65,9 @@ class ExerciseLink extends AbstractLink
         $TBL_DOCUMENT = Database :: get_course_table(TABLE_DOCUMENT);
         $TBL_ITEM_PROPERTY = Database :: get_course_table(TABLE_ITEM_PROPERTY);
         $documentPath = api_get_path(SYS_COURSE_PATH).$this->course_code."/document";
-        if (empty($this->course_code)) {
-            die('Error in get_not_created_links() : course code not set');
-        }    	    	
+    	if (empty($this->course_code)) {
+    		die('Error in get_not_created_links() : course code not set');
+    	}    	    	
         $session_id = api_get_session_id();
         if (empty($session_id)) {
             $session_condition = api_get_session_condition(0, true);
@@ -85,22 +84,23 @@ class ExerciseLink extends AbstractLink
                 d.id = ip.ref AND ip.tool = '".TOOL_DOCUMENT."' AND (d.path LIKE '%htm%')AND (d.path LIKE '%HotPotatoes_files%')
                 AND   d.path  LIKE '".Database :: escape_string($uploadPath)."/%/%' AND ip.visibility='1'";
         
+        
         /*
         $sql = 'SELECT id,title from '.$this->get_exercise_table().' 
 				WHERE c_id = '.$this->course_id.' AND active=1 AND session_id='.api_get_session_id().'';
         */
         require_once api_get_path(SYS_CODE_PATH).'exercice/hotpotatoes.lib.php';
 		if (!$this->is_hp) {
-            $result = Database::query($sql);
+		$result = Database::query($sql);
         } else {
             $result2 = Database::query($sql2);
         }
 		$cats = array();
         if (isset($result)) {
             if (Database::num_rows($result) > 0) {
-                while ($data=Database::fetch_array($result)) {
-                    $cats[] = array ($data['id'], $data['title']);
-                }
+		        while ($data=Database::fetch_array($result)) {
+			        $cats[] = array ($data['id'], $data['title']);
+		        }
             }
         }
         if (isset($result2)) {
@@ -134,11 +134,11 @@ class ExerciseLink extends AbstractLink
      * Has anyone done this exercise yet ?
      */
     public function has_results() {
-    	$tbl_stats = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
+    	$tbl_stats = Database::get_main_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
         $session_id = api_get_session_id();
 		$sql = 'SELECT count(exe_id) AS number FROM '.$tbl_stats." 
                     WHERE   session_id = $session_id AND 
-                            exe_cours_id = '".$this->get_course_code()."'".' AND 
+                            c_id = '".$this->course_id."'".' AND
                             exe_exo_id   = '.(int)$this->get_ref_id();
     	$result = Database::query($sql);
 		$number=Database::fetch_row($result);
@@ -152,22 +152,21 @@ class ExerciseLink extends AbstractLink
 	 * 			array (sum of scores, number of scores) otherwise
 	 * 			or null if no scores available
 	 */
-    public function calc_score($stud_id = null) {
-    	$tbl_stats = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
-    	//$tbl_stats_e_attempt_recording = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_ATTEMPT_RECORDING);
-        //the following query should be similar (in conditions) to the one used in exercice/exercice.php, look for note-query-exe-results marker
+    public function calc_score($stud_id = null)
+    {
+    	$tbl_stats = Database::get_main_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
+        // The following query should be similar (in conditions)
+        // to the one used in exercice/exercice.php, look for note-query-exe-results marker
         $session_id = api_get_session_id();
 		$sql = "SELECT * FROM $tbl_stats
                 WHERE   exe_exo_id      = ".intval($this->get_ref_id())." AND 
                         orig_lp_id      = 0 AND 
                         orig_lp_item_id = 0 AND 
                         status      <> 'incomplete' AND
-                        session_id = $session_id                            
-                ";
+                        session_id = $session_id";
 
 		if (isset($stud_id)) {
-    		$course_code_exe = $this->get_course_code();
-    		$sql .= " AND exe_cours_id = '$course_code_exe' AND 
+    		$sql .= " AND c_id = '{$this->course_id}' AND
                       exe_user_id = '$stud_id' ";
     	}
 		$sql .= ' ORDER BY exe_id DESC';
@@ -214,8 +213,8 @@ class ExerciseLink extends AbstractLink
 	public function get_link() {
 		//status student
 		$user_id = api_get_user_id();
-		$course_code = $this->get_course_code();
-		$status_user=api_get_status_of_user_in_course ($user_id, $course_code);
+		//$course_code = $this->get_course_code();
+		$status_user = api_get_status_of_user_in_course($user_id, $this->course_id);
         $session_id =api_get_session_id();
 		$url = api_get_path(WEB_PATH).'main/gradebook/exercise_jump.php?session_id='.$session_id.'&cidReq='.$this->get_course_code().'&gradebook=view&exerciseId='.$this->get_ref_id();
 		if ((!api_is_allowed_to_edit() && $this->calc_score(api_get_user_id()) == null) || $status_user!=1) {
@@ -230,7 +229,7 @@ class ExerciseLink extends AbstractLink
     public function get_name() {
         $documentPath = api_get_path(SYS_COURSE_PATH).$this->course_code."/document";
         require_once api_get_path(SYS_CODE_PATH).'exercice/hotpotatoes.lib.php';
-        $data = $this->get_exercise_data(); 
+    	$data = $this->get_exercise_data();        
         if ($this->is_hp == 1) {
             if (isset($data['path'])) {
                 $hotpotatoes_exist = true;
@@ -268,11 +267,10 @@ class ExerciseLink extends AbstractLink
         if ($this->is_hp == 1) {
             return get_lang('Hopotatoe');
         } else {
-            return get_lang('Quiz');
-        }
-    	
+    	return get_lang('Quiz');
     }
 
+    }
 	public function needs_name_and_description() {
 		return false;
 	}
@@ -296,8 +294,8 @@ class ExerciseLink extends AbstractLink
      * Lazy load function to get the database table of the exercise
      */
     private function get_exercise_table() {
-        $this->exercise_table = Database :: get_course_table(TABLE_QUIZ_TEST);
-        return $this->exercise_table;   		
+    	$this->exercise_table = Database :: get_course_table(TABLE_QUIZ_TEST);
+    	return $this->exercise_table;   		
     }
 
     /**
@@ -308,9 +306,9 @@ class ExerciseLink extends AbstractLink
            $tbl_exercise = Database :: get_course_table(TABLE_DOCUMENT); 
            $TBL_ITEM_PROPERTY = Database :: get_course_table(TABLE_ITEM_PROPERTY);           
         } else {
-            $tbl_exercise = $this->get_exercise_table();
+    	$tbl_exercise = $this->get_exercise_table();
         }
-        if ($tbl_exercise=='') {
+    	if ($tbl_exercise=='') {
     		return false;
     	} elseif (!isset($this->exercise_data)) {
             if ($this->is_hp == 1) {
@@ -319,7 +317,8 @@ class ExerciseLink extends AbstractLink
                         WHERE ip.ref = ex.id AND ip.c_id = $this->course_id AND ex.c_id = $this->course_id AND ip.tool = '".TOOL_DOCUMENT."' AND (ex.path LIKE '%htm%')AND (ex.path LIKE '%HotPotatoes_files%') AND ip.visibility = 1";    	       
             } else {    	       
                 $sql = 'SELECT * FROM '.$tbl_exercise.' 
-                        WHERE c_id = '.$this->course_id.' AND id = '.(int)$this->get_ref_id().' ';
+					WHERE c_id = '.$this->course_id.' AND id = '.(int)$this->get_ref_id().' ';
+			
             }
 			$result = Database::query($sql);
 			$this->exercise_data=Database::fetch_array($result);

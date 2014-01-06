@@ -2,13 +2,13 @@
 /* For licensing terms, see /license.txt */
 
 /**
- *	This script displays an area where teachers can edit the group properties and member list.
- *	Groups are also often called "teams" in the Dokeos code.
+ *    This script displays an area where teachers can edit the group properties and member list.
+ *    Groups are also often called "teams" in the Dokeos code.
  *
- *	@author various contributors
- *	@author Roan Embrechts (VUB), partial code cleanup, initial virtual course support
- *	@package chamilo.group
- *	@todo course admin functionality to create groups based on who is in which course (or class).
+ * @author various contributors
+ * @author Roan Embrechts (VUB), partial code cleanup, initial virtual course support
+ * @package chamilo.group
+ * @todo course admin functionality to create groups based on who is in which course (or class).
  */
 
 /*	INIT SECTION */
@@ -18,7 +18,7 @@ $language_file = 'group';
 
 require '../inc/global.inc.php';
 $this_section = SECTION_COURSES;
-$current_course_tool  = TOOL_GROUP;
+$current_course_tool = TOOL_GROUP;
 
 // Notice for unauthorized people.
 api_protect_course_script(true);
@@ -27,8 +27,8 @@ $group_id = api_get_group_id();
 $current_group = GroupManager :: get_group_properties($group_id);
 
 $nameTools = get_lang('EditGroup');
-$interbreadcrumb[] = array ('url' => 'group.php', 'name' => get_lang('Groups'));
-$interbreadcrumb[] = array ('url' => 'group_space.php?'.api_get_cidReq(), 'name' => $current_group['name']);
+$interbreadcrumb[] = array('url' => 'group.php', 'name' => get_lang('Groups'));
+$interbreadcrumb[] = array('url' => 'group_space.php?'.api_get_cidReq(), 'name' => $current_group['name']);
 
 $is_group_member = GroupManager :: is_tutor_of_group(api_get_user_id(), $group_id);
 
@@ -43,10 +43,10 @@ if (!api_is_allowed_to_edit(false, true) && !$is_group_member) {
  */
 function search_members_keyword($firstname, $lastname, $username, $official_code, $keyword)
 {
-    if (api_strripos($firstname, $keyword) !== false ||
-        api_strripos($lastname, $keyword) !== false ||
-        api_strripos($username, $keyword) !== false ||
-        api_strripos($official_code, $keyword) !== false
+    if (api_strripos($firstname, $keyword) !== false || api_strripos($lastname, $keyword) !== false || api_strripos(
+        $username,
+        $keyword
+    ) !== false || api_strripos($official_code, $keyword) !== false
     ) {
         return true;
     } else {
@@ -108,8 +108,11 @@ function check_group_members($value)
     if ($value['max_member_no_limit'] == GroupManager::MEMBER_PER_GROUP_NO_LIMIT) {
         return true;
     }
-    if (isset($value['max_member']) && isset($value['group_members']) && $value['max_member'] < count($value['group_members'])) {
-        return array ('group_members' => get_lang('GroupTooMuchMembers'));
+    if (isset($value['max_member']) && isset($value['group_members']) && $value['max_member'] < count(
+        $value['group_members']
+    )
+    ) {
+        return array('group_members' => get_lang('GroupTooMuchMembers'));
     }
     return true;
 }
@@ -135,14 +138,25 @@ $form->addElement('hidden', 'referer');
 $form->add_textfield('name', get_lang('GroupName'));
 
 // Description
-$form->addElement('textarea', 'description', get_lang('Description'), array ('class' => 'span6', 'rows' => 6));
+$form->addElement('textarea', 'description', get_lang('Description'), array('class' => 'span6', 'rows' => 6));
 
-$complete_user_list = GroupManager :: fill_groups_list($current_group['id']);
-usort($complete_user_list, 'sort_users');
+// Getting course info
+$course = $app['orm.em']->getRepository('Entity\Course')->find(api_get_course_int_id());
+
+//Getting subscribed students
+$subscribedUsers = $app['orm.em']->getRepository('Entity\Course')->getSubscribedStudents($course);
+$subscribedUsers = $subscribedUsers->getQuery();
+$subscribedUsers = $subscribedUsers->execute();
+
+// Getting all users
+$complete_user_list = array();
+foreach ($subscribedUsers as $user) {
+    $complete_user_list[$user->getUserId()] = $user->getCompleteNameWithClasses();
+}
 
 $possible_users = array();
-foreach ($complete_user_list as $index => $user) {
-    $possible_users[$user['user_id']] = api_get_person_name($user['firstname'], $user['lastname']).' ('.$user['username'].')';
+foreach ($complete_user_list as $userId => $user) {
+    $possible_users[$userId] = $user;
 }
 
 // Group tutors
@@ -152,124 +166,223 @@ $selected_tutors = array();
 foreach ($group_tutor_list as $index => $user) {
     $selected_tutors[] = $user['user_id'];
 }
-
-$group_tutors_element = $form->addElement('advmultiselect', 'group_tutors', get_lang('GroupTutors'), $possible_users, 'style="width: 280px;"');
-$group_tutors_element->setElementTemplate('
-{javascript}
-<table{class}>
-<!-- BEGIN label_2 --><tr><th>{label_2}</th><!-- END label_2 -->
-<!-- BEGIN label_3 --><th>&nbsp;</th><th>{label_3}</th></tr><!-- END label_3 -->
-<tr>
-  <td valign="top">{unselected}</td>
-  <td align="center">{add}<br /><br />{remove}</td>
-  <td valign="top">{selected}</td>
-</tr>
-</table>
-');
-
-$group_tutors_element->setButtonAttributes('add', array('class' => 'btn arrowr'));
-$group_tutors_element->setButtonAttributes('remove', array('class' => 'btn arrowl'));
+$group_tutors_element = $form->addElement('advmultiselect', 'group_tutors', get_lang('GroupTutors'), $possible_users);
+$group_tutors_element->setButtonAttributes('add');
+$group_tutors_element->setButtonAttributes('remove');
 
 // Group members
 $group_member_list = GroupManager :: get_subscribed_users($current_group['id']);
 
-$selected_users = array ();
-foreach ($group_member_list as $index => $user) {
-    $selected_users[] = $user['user_id'];
+$selected_users = array();
+foreach ($group_member_list as $userId => $userName) {
+    $selected_users[] = $userId;
 }
+
 
 // possible : number_groups_left > 0 and is group member
 $possible_users = array();
-foreach ($complete_user_list as $index => $user) {
-     if ($user['number_groups_left'] > 0 || in_array($user['user_id'], $selected_users)) {
-        $possible_users[$user['user_id']] = api_get_person_name($user['firstname'], $user['lastname']).' ('.$user['username'].')';
-     }
+
+foreach ($complete_user_list as $userId => $userName) {
+    $possible_users[$userId] = $userName;
 }
 
-$group_members_element = $form->addElement('advmultiselect', 'group_members', get_lang('GroupMembers'), $possible_users, 'style="width: 280px;"');
+$group_members_element = $form->addElement(
+    'advmultiselect',
+    'group_members',
+    get_lang('GroupMembers'),
+    $possible_users
+);
 
-$group_members_element->setElementTemplate('
-{javascript}
-<table{class}>
-<!-- BEGIN label_2 --><tr><th>{label_2}</th><!-- END label_2 -->
-<!-- BEGIN label_3 --><th>&nbsp;</th><th>{label_3}</th></tr><!-- END label_3 -->
-<tr>
-  <td valign="top">{unselected}</td>
-  <td align="center">{add}<br /><br />{remove}</td>
-  <td valign="top">{selected}</td>
-</tr>
-</table>');
-
-$group_members_element->setButtonAttributes('add', array('class' => 'btn arrowr'));
-$group_members_element->setButtonAttributes('remove', array('class' => 'btn arrowl'));
+$group_members_element->setButtonAttributes('add');
+$group_members_element->setButtonAttributes('remove');
 $form->addFormRule('check_group_members');
 
 // Members per group
-$form->addElement('radio', 'max_member_no_limit', get_lang('GroupLimit'), get_lang('NoLimit'), GroupManager::MEMBER_PER_GROUP_NO_LIMIT);
+$form->addElement(
+    'radio',
+    'max_member_no_limit',
+    get_lang('GroupLimit'),
+    get_lang('NoLimit'),
+    GroupManager::MEMBER_PER_GROUP_NO_LIMIT
+);
 $group = array();
-$group[] = $form->createElement('radio', 'max_member_no_limit', null, get_lang('MaximumOfParticipants'), 1, array('id' => 'max_member_selected'));
+$group[] = $form->createElement(
+    'radio',
+    'max_member_no_limit',
+    null,
+    get_lang('MaximumOfParticipants'),
+    1,
+    array('id' => 'max_member_selected')
+);
 $group[] = $form->createElement('text', 'max_member', null, array('class' => 'span1', 'id' => 'max_member'));
 $group[] = $form->createElement('static', null, null, get_lang('GroupPlacesThis'));
 $form->addGroup($group, 'max_member_group', null, '', false);
 $form->addRule('max_member_group', get_lang('InvalidMaxNumberOfMembers'), 'callback', 'check_max_number_of_members');
 
 // Self registration
-$group = array(
-    $form->createElement('checkbox', 'self_registration_allowed', get_lang('GroupSelfRegistration'), get_lang('GroupAllowStudentRegistration'), 1),
-    $form->createElement('checkbox', 'self_unregistration_allowed', null, get_lang('GroupAllowStudentUnregistration'), 1)
+$group = array();
+$group[] = $form->createElement(
+    'checkbox',
+    'self_registration_allowed',
+    get_lang('GroupSelfRegistration'),
+    get_lang('GroupAllowStudentRegistration'),
+    1
 );
-$form->addGroup($group, '', Display::return_icon('user.png', get_lang('GroupSelfRegistration') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupSelfRegistration'), '', false);
+$group[] = $form->createElement(
+    'checkbox',
+    'self_unregistration_allowed',
+    null,
+    get_lang('GroupAllowStudentUnregistration'),
+    1
+);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('user.png', get_lang('GroupSelfRegistration'), array(), ICON_SIZE_SMALL).' '.get_lang(
+        'GroupSelfRegistration'
+    ),
+    '',
+    false
+);
 
 // Documents settings
 $group = array();
-$group[] = $form->createElement('radio', 'doc_state', get_lang('GroupDocument'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE);
+$group[] = $form->createElement(
+    'radio',
+    'doc_state',
+    get_lang('GroupDocument'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
+);
 $group[] = $form->createElement('radio', 'doc_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
 $group[] = $form->createElement('radio', 'doc_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
-$form->addGroup($group, '', Display::return_icon('folder.png', get_lang('GroupDocument') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupDocument'), '', false);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('folder.png', get_lang('GroupDocument'), array(), ICON_SIZE_SMALL).' '.get_lang(
+        'GroupDocument'
+    ),
+    '',
+    false
+);
 
 // Work settings
 $group = array();
-$group[] = $form->createElement('radio', 'work_state', get_lang('GroupWork'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE);
+$group[] = $form->createElement(
+    'radio',
+    'work_state',
+    get_lang('GroupWork'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
+);
 $group[] = $form->createElement('radio', 'work_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
 $group[] = $form->createElement('radio', 'work_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
-$form->addGroup($group, '', Display::return_icon('work.png', get_lang('GroupWork') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupWork'), '', false);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('work.png', get_lang('GroupWork'), array(), ICON_SIZE_SMALL).' '.get_lang('GroupWork'),
+    '',
+    false
+);
 
 // Calendar settings
 $group = array();
-$group[] = $form->createElement('radio', 'calendar_state', get_lang('GroupCalendar'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE);
+$group[] = $form->createElement(
+    'radio',
+    'calendar_state',
+    get_lang('GroupCalendar'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
+);
 $group[] = $form->createElement('radio', 'calendar_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
 $group[] = $form->createElement('radio', 'calendar_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
-$form->addGroup($group, '', Display::return_icon('agenda.png', get_lang('GroupCalendar') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupCalendar'), '', false);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('agenda.png', get_lang('GroupCalendar'), array(), ICON_SIZE_SMALL).' '.get_lang(
+        'GroupCalendar'
+    ),
+    '',
+    false
+);
 
 // Announcements settings
 $group = array();
-$group[] = $form->createElement('radio', 'announcements_state', get_lang('GroupAnnouncements'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE);
+$group[] = $form->createElement(
+    'radio',
+    'announcements_state',
+    get_lang('GroupAnnouncements'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
+);
 $group[] = $form->createElement('radio', 'announcements_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
 $group[] = $form->createElement('radio', 'announcements_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
-$form->addGroup($group, '', Display::return_icon('announce.png', get_lang('GroupAnnouncements') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupAnnouncements'), '', false);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('announce.png', get_lang('GroupAnnouncements'), array(), ICON_SIZE_SMALL).' '.get_lang(
+        'GroupAnnouncements'
+    ),
+    '',
+    false
+);
 
 //Forum settings
 $group = array();
-$group[] = $form->createElement('radio', 'forum_state', get_lang('GroupForum'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE);
+$group[] = $form->createElement(
+    'radio',
+    'forum_state',
+    get_lang('GroupForum'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
+);
 $group[] = $form->createElement('radio', 'forum_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
 $group[] = $form->createElement('radio', 'forum_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
-$form->addGroup($group, '', Display::return_icon('forum.png', get_lang('GroupForum') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupForum'), '', false);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('forum.png', get_lang('GroupForum'), array(), ICON_SIZE_SMALL).' '.get_lang('GroupForum'),
+    '',
+    false
+);
 
 // Wiki settings
-$group = array(
-    $form->createElement('radio', 'wiki_state', get_lang('GroupWiki'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE),
-    $form->createElement('radio', 'wiki_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC),
-    $form->createElement('radio', 'wiki_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE)
+$group = array();
+$group[] = $form->createElement(
+    'radio',
+    'wiki_state',
+    get_lang('GroupWiki'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
 );
-$form->addGroup($group, '', Display::return_icon('wiki.png', get_lang('GroupWiki') , array(), ICON_SIZE_SMALL).' '.get_lang('GroupWiki'), '', false);
+$group[] = $form->createElement('radio', 'wiki_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
+$group[] = $form->createElement('radio', 'wiki_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('wiki.png', get_lang('GroupWiki'), array(), ICON_SIZE_SMALL).' '.get_lang('GroupWiki'),
+    '',
+    false
+);
 
 // Chat settings
-$group = array(
-    $form->createElement('radio', 'chat_state', get_lang('Chat'), get_lang('NotAvailable'), GroupManager::TOOL_NOT_AVAILABLE),
-    $form->createElement('radio', 'chat_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC),
-    $form->createElement('radio', 'chat_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE)
+$group = array();
+$group[] = $form->createElement(
+    'radio',
+    'chat_state',
+    get_lang('Chat'),
+    get_lang('NotAvailable'),
+    GroupManager::TOOL_NOT_AVAILABLE
 );
-$form->addGroup($group, '', Display::return_icon('chat.png', get_lang('Chat'), array(), ICON_SIZE_SMALL).' '.get_lang('Chat'), '', false);
+$group[] = $form->createElement('radio', 'chat_state', null, get_lang('Public'), GroupManager::TOOL_PUBLIC);
+$group[] = $form->createElement('radio', 'chat_state', null, get_lang('Private'), GroupManager::TOOL_PRIVATE);
+$form->addGroup(
+    $group,
+    '',
+    Display::return_icon('chat.png', get_lang('Chat'), array(), ICON_SIZE_SMALL).' '.get_lang('Chat'),
+    '',
+    false
+);
 
 // submit button
 $form->addElement('style_submit_button', 'submit', get_lang('SaveSettings'), 'class="save"');
@@ -281,10 +394,9 @@ if ($form->validate()) {
     } else {
         $max_member = $values['max_member'];
     }
-    $self_registration_allowed   = isset($values['self_registration_allowed']) ? 1 : 0;
+    $self_registration_allowed = isset($values['self_registration_allowed']) ? 1 : 0;
     $self_unregistration_allowed = isset($values['self_unregistration_allowed']) ? 1 : 0;
-
-    GroupManager::set_group_properties(
+    GroupManager :: set_group_properties(
         $current_group['id'],
         strip_tags($values['name']),
         strip_tags($values['description']),
@@ -314,10 +426,21 @@ if ($form->validate()) {
 
     // Returning to the group area (note: this is inconsistent with the rest of chamilo)
     $cat = GroupManager :: get_category_from_group($current_group['id']);
-    if (isset($_POST['group_members']) && count($_POST['group_members']) > $max_member && $max_member != GroupManager::MEMBER_PER_GROUP_NO_LIMIT) {
-        header('Location: group.php?'.api_get_cidreq(true, false).'&action=warning_message&msg='.get_lang('GroupTooMuchMembers'));
+    if (isset($_POST['group_members']) && count(
+        $_POST['group_members']
+    ) > $max_member && $max_member != GroupManager::MEMBER_PER_GROUP_NO_LIMIT
+    ) {
+        header(
+            'Location: group.php?'.api_get_cidreq(true, false).'&action=warning_message&msg='.get_lang(
+                'GroupTooMuchMembers'
+            )
+        );
     } else {
-        header('Location: group.php?'.api_get_cidreq(true, false).'&action=success_message&msg='.get_lang('GroupSettingsModified').'&category='.$cat['id']);
+        header(
+            'Location: group.php?'.api_get_cidreq(true, false).'&action=success_message&msg='.get_lang(
+                'GroupSettingsModified'
+            ).'&category='.$cat['id']
+        );
     }
     exit;
 }
@@ -333,6 +456,7 @@ if ($defaults['maximum_number_of_students'] == GroupManager::MEMBER_PER_GROUP_NO
     $defaults['max_member_no_limit'] = 1;
     $defaults['max_member'] = $defaults['maximum_number_of_students'];
 }
+
 
 if (!empty($_GET['keyword']) && !empty($_GET['submit'])) {
     $keyword_name = Security::remove_XSS($_GET['keyword']);

@@ -8,7 +8,7 @@
  */
 require_once 'pear/HTML/Table.php';
 require_once 'pear/Pager/Pager.php';
-//require_once 'tablesort.lib.php'; moved to autoload table_sort.class.php
+
 /**
  * This class allows you to display a sortable data-table. It is possible to
  * split the data in several pages.
@@ -21,7 +21,8 @@ require_once 'pear/Pager/Pager.php';
  * - navigate through all data-pages
  * @package chamilo.library
  */
-class SortableTable extends HTML_Table {
+class SortableTable extends HTML_Table
+{
     /**
      * A name for this table
      */
@@ -113,6 +114,7 @@ class SortableTable extends HTML_Table {
      * on one page
      * @param string $default_order_direction The default order direction;
      * either the constant 'ASC' or 'DESC'
+     * @param int $table_id
      */
     public function __construct(
         $table_name = 'table',
@@ -128,17 +130,17 @@ class SortableTable extends HTML_Table {
         }
         $this->table_id = $table_id;
 
-        parent :: __construct (array ('class' => 'data_table', 'id' => $table_id));
+        parent :: __construct(array( 'id' => $table_id, 'class' => 'table table-striped table-hover'));
         $this->table_name = $table_name;
         $this->additional_parameters = array();
         $this->param_prefix = $table_name.'_';
 
-        $this->page_nr = isset ($_SESSION[$this->param_prefix.'page_nr']) ? intval($_SESSION[$this->param_prefix.'page_nr']) : 1;
-        $this->page_nr = isset ($_GET[$this->param_prefix.'page_nr'])       ? intval($_GET[$this->param_prefix.'page_nr']) : $this->page_nr;
-        $this->column  = isset ($_SESSION[$this->param_prefix.'column'])  ? intval($_SESSION[$this->param_prefix.'column']) : $default_column;
-        $this->column  = isset ($_GET[$this->param_prefix.'column'])       ? intval($_GET[$this->param_prefix.'column']) : $this->column;
+        $this->page_nr = isset($_SESSION[$this->param_prefix.'page_nr']) ? intval($_SESSION[$this->param_prefix.'page_nr']) : 1;
+        $this->page_nr = isset($_GET[$this->param_prefix.'page_nr']) ? intval($_GET[$this->param_prefix.'page_nr']) : $this->page_nr;
+        $this->column  = isset($_SESSION[$this->param_prefix.'column']) ? intval($_SESSION[$this->param_prefix.'column']) : $default_column;
+        $this->column  = isset($_GET[$this->param_prefix.'column']) ? intval($_GET[$this->param_prefix.'column']) : $this->column;
 
-        //Default direction
+        // Default direction
 
         if (in_array(strtoupper($default_order_direction), array('ASC', 'DESC'))) {
             $this->direction = $default_order_direction;
@@ -159,7 +161,7 @@ class SortableTable extends HTML_Table {
 
         if (isset($_GET[$this->param_prefix.'direction'])) {
             $my_get_direction = $_GET[$this->param_prefix.'direction'];
-            if (!in_array($my_get_direction, array('ASC', 'DESC'))){
+            if (!in_array($my_get_direction, array('ASC', 'DESC'))) {
                 $this->direction = 'ASC';
             } else {
                 if ($my_get_direction == 'ASC') {
@@ -170,12 +172,11 @@ class SortableTable extends HTML_Table {
             }
         }
 
-
         // Allow to change paginate in multiples tabs
         unset($_SESSION[$this->param_prefix.'per_page']);
 
         $this->per_page = isset ($_SESSION[$this->param_prefix.'per_page']) ? intval($_SESSION[$this->param_prefix.'per_page']) : $default_items_per_page;
-        $this->per_page = isset ($_GET[$this->param_prefix.'per_page'])        ? intval($_GET[$this->param_prefix.'per_page']) : $this->per_page;
+        $this->per_page = isset ($_GET[$this->param_prefix.'per_page']) ? intval($_GET[$this->param_prefix.'per_page']) : $this->per_page;
 
         $_SESSION[$this->param_prefix.'per_page']  = $this->per_page;
         $_SESSION[$this->param_prefix.'direction'] = $this->direction ;
@@ -197,7 +198,8 @@ class SortableTable extends HTML_Table {
     /**
      * Get the Pager object to split the showed data in several pages
      */
-    public function get_pager() {
+    public function get_pager()
+    {
         if (is_null($this->pager)) {
             $total_number_of_items   = $this->get_total_number_of_items();
             $params['mode']          = 'Sliding';
@@ -232,11 +234,13 @@ class SortableTable extends HTML_Table {
     {
         echo $this->return_table();
     }
+
     /**
      * Displays the table, complete with navigation buttons to browse through
      * the data-pages.
      */
-    public function return_table() {
+    public function return_table()
+    {
         $empty_table = false;
         $content = $this->get_table_html();
 
@@ -290,36 +294,38 @@ class SortableTable extends HTML_Table {
             $html .= '<tr>';
             $html .= '<td>';
 
+            // Actions in table
             if (count($this->form_actions) > 0) {
-
                 $html .= '<div class="btn-toolbar">';
-                    $html .= '<div class="btn-group">';
-                    $html .= '<a class="btn" href="?'.$params.'&amp;'.$this->param_prefix.'selectall=1" onclick="javascript: setCheckbox(true, \''.$table_id.'\'); return false;">'.get_lang('SelectAll').'</a>';
-                    $html .= '<a class="btn" href="?'.$params.'" onclick="javascript: setCheckbox(false, \''.$table_id.'\'); return false;">'.get_lang('UnSelectAll').'</a> ';
-                    $html .= '</div>';
-                    $html .= '<div class="btn-group">
-                                <button class="btn" onclick="javascript:return false;">'.get_lang('Actions').'</button>
-                                <button class="btn dropdown-toggle" data-toggle="dropdown">
-                                    <span class="caret"></span>
-                                </button>';
-                    $html .= '<ul class="dropdown-menu">';
-                    foreach ($this->form_actions as $action => & $label) {
-                        $html .= '<li><a data-action ="'.$action.'" href="#" onclick="javascript:action_click(this, \''.$table_id.'\');">'.$label.'</a></li>';
-                    }
-                    $html .= '</ul>';
-                    $html .= '</div>';//btn-group
+                $html .= '<div class="btn-group">';
+                $html .= '<a class="btn btn-default" href="?'.$params.'&amp;'.$this->param_prefix.'selectall=1" onclick="javascript: setCheckbox(true, \''.$table_id.'\'); return false;">'.get_lang('SelectAll').'</a>';
+                $html .= '<a class="btn btn-default" href="?'.$params.'" onclick="javascript: setCheckbox(false, \''.$table_id.'\'); return false;">'.get_lang('UnSelectAll').'</a> ';
+                $html .= '</div>';
+                $html .= '<div class="btn-group">
+                            <button class="btn btn-default" onclick="javascript:return false;">'.get_lang('Actions').'</button>
+                            <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span class="caret"></span>
+                            </button>';
+                $html .= '<ul class="dropdown-menu">';
+                foreach ($this->form_actions as $action => & $label) {
+                    $html .= '<li>
+                        <a data-action ="'.$action.'" href="#" onclick="javascript:action_click(this, \''.$table_id.'\');">'.$label.'</a>
+                    </li>';
+                }
+                $html .= '</ul>';
+                $html .= '</div>';//btn-group
                 $html .= '</div>'; //toolbar
             } else {
                 $html .= $form;
             }
 
             $html .= '</td>';
-
+            // Pagination
             if ($this->get_total_number_of_items() > $this->default_items_per_page) {
                 $html .= '<td style="text-align:right;">';
                 $html .= $nav;
                 $html .= '</td>';
-            }else{
+            } else {
                 $html .= '<td> ';
                 $html .= '</td>';
             }
@@ -334,10 +340,11 @@ class SortableTable extends HTML_Table {
     }
 
     /**
-     * This function shows the content of a table in a grid.
-     * Should not be use to edit information (edit/delete rows) only.
-     * */
-    public function display_grid() {
+    * This function shows the content of a table in a grid.
+    * Should not be use to edit information (edit/delete rows) only.
+    **/
+    public function display_grid()
+    {
 
         $empty_table = false;
         if ($this->get_total_number_of_items() == 0) {
@@ -376,9 +383,9 @@ class SortableTable extends HTML_Table {
 
             if ($my_pager->numPages() > 1) {
                 $html .= '<div class="sub-header">';
-                        $html .= '<div class="grid_selectbox">'.$form.'</div>';
-                        $html .= '<div class="grid_title">'.$this->get_table_title().'</div>';
-                        $html .= '<div class="grid_nav">'.$nav.'</div>';
+                $html .= '<div class="grid_selectbox">'.$form.'</div>';
+                $html .= '<div class="grid_title">'.$this->get_table_title().'</div>';
+                $html .= '<div class="grid_nav">'.$nav.'</div>';
                 $html .= '</div>';
             }
 
@@ -425,40 +432,8 @@ class SortableTable extends HTML_Table {
             }
         }
         $html .= '</div>'; //close grid_container
-
         $html .= '</div>'; //close main grid
-
-
         $html .= '<div class="clear"></div>';
-        /*
-        if (!$empty_table) {
-            $html .= '<table style="width:100%;">';
-            $html .= '<tr>';
-            $html .= '<td colspan="2">';
-            if (count($this->form_actions) > 0) {
-                $html .= '<br />';
-                $html .= '<a href="?'.$params.'&amp;'.$this->param_prefix.'selectall=1" onclick="javascript:setCheckbox(true);return false;">'.get_lang('SelectAll').'</a> - ';
-                $html .= '<a href="?'.$params.'" onclick="javascript:setCheckbox(false);return false;">'.get_lang('UnSelectAll').'</a> ';
-                $html .= '<select name="action">';
-                foreach ($this->form_actions as $action => $label) {
-                    $html .= '<option value="'.$action.'">'.$label.'</option>';
-                }
-                $html .= '</select>';
-                $html .= '&nbsp;&nbsp;<button type="submit" class="save" onclick="javascript: if(!confirm('."'".addslashes(api_htmlentities(get_lang("ConfirmYourChoice"),ENT_QUOTES))."'".')) return false;">'.get_lang('Select').'</button>';
-            } else {
-                $html .= $form;
-            }
-            $html .= '</td>';
-            $html .= '<td style="text-align:right;">';
-            $html .= $nav;
-            $html .= '</td>';
-            $html .= '</tr>';
-            $html .= '</div>';
-            if (count($this->form_actions) > 0) {
-                $html .= '</form>';
-            }
-        }
-        */
         echo $html;
     }
 
@@ -471,8 +446,8 @@ class SortableTable extends HTML_Table {
      * @param bool         sort data optionally
      * @return string    grid html
      */
-    public function display_simple_grid($visibility_options, $hide_navigation = true, $per_page = 20, $sort_data = true, $grid_class = array()) {
-
+    public function display_simple_grid($visibility_options, $hide_navigation = true, $per_page = 20, $sort_data = true, $grid_class = array())
+    {
         $empty_table = false;
         $total = $this->get_total_number_of_items();
 
@@ -578,13 +553,15 @@ class SortableTable extends HTML_Table {
      * Get the HTML-code with the navigational buttons to browse through the
      * data-pages.
      */
-    public function get_navigation_html () {
-        $pager          = $this->get_pager();
-        $pager_links    = $pager->getLinks();
-
-        $nav            = $pager_links['first'].' '.$pager_links['back'];
-        $nav            .= ' '.$pager->getCurrentPageId().' / '.$pager->numPages().' ';
-        $nav            .= $pager_links['next'].' '.$pager_links['last'];
+    public function get_navigation_html()
+    {
+        $pager = $this->get_pager();
+        $pager_links = $pager->getLinks();
+        $nav = '<div class="btn-toolbar" role="toolbar">';
+        $nav .= $pager_links['first'].' '.$pager_links['back'];
+        $nav .= ' '.$pager->getCurrentPageId().' / '.$pager->numPages().' ';
+        $nav .= $pager_links['next'].' '.$pager_links['last'];
+        $nav .= '</div>';
         return $nav;
     }
 
@@ -628,7 +605,8 @@ class SortableTable extends HTML_Table {
      * @param bool true for sorting table data or false otherwise
      * @return array table row items
      */
-    public function get_clean_html($sort = true) {
+    public function get_clean_html($sort = true)
+    {
         $pager    = $this->get_pager();
         $offset   = $pager->getOffsetByPageId();
         $from     = $offset[0] - 1;
@@ -637,7 +615,7 @@ class SortableTable extends HTML_Table {
 
         $new_table_data = array();
         if (is_array($table_data)) {
-            foreach ($table_data as $index => & $row) {
+            foreach ($table_data as & $row) {
                 $row = $this->filter_data($row);
                 $new_table_data[] = $row;
             }
@@ -649,7 +627,8 @@ class SortableTable extends HTML_Table {
      * Get the HTML-code wich represents a form to select how many items a page
      * should contain.
      */
-    public function get_page_select_form () {
+    public function get_page_select_form ()
+    {
         $total_number_of_items = $this->get_total_number_of_items();
         if ($total_number_of_items <= $this->default_items_per_page) {
             return '';
@@ -672,7 +651,7 @@ class SortableTable extends HTML_Table {
         }
         // @todo no limits
         //if ($total_number_of_items < 500) {
-            $result[] = '<option value="'.$total_number_of_items.'" '. ($total_number_of_items == $this->per_page ? 'selected="selected"' : '').'>'.api_ucfirst(get_lang('All')).'</option>';
+        $result[] = '<option value="'.$total_number_of_items.'" '. ($total_number_of_items == $this->per_page ? 'selected="selected"' : '').'>'.api_ucfirst(get_lang('All')).'</option>';
         //}
         $result[] = '</select>';
         $result[] = '<noscript>';
@@ -686,7 +665,8 @@ class SortableTable extends HTML_Table {
     /**
      * Get the table title.
      */
-    public function get_table_title () {
+    public function get_table_title()
+    {
         $pager = $this->get_pager();
         $showed_items = $pager->getOffsetByPageId();
         return $showed_items[0].' - '.$showed_items[1].' / '.$this->get_total_number_of_items();
@@ -703,7 +683,8 @@ class SortableTable extends HTML_Table {
      * @param string $td_attributes Additional attributes for the td-tags of the
      * column
      */
-    public function set_header ($column, $label, $sortable = true, $th_attributes = null, $td_attributes = null) {
+    public function set_header($column, $label, $sortable = true, $th_attributes = null, $td_attributes = null)
+    {
         $param['direction'] = 'ASC';
         if ($this->column == $column && $this->direction == 'ASC') {
             $param['direction'] = 'DESC';
@@ -737,7 +718,8 @@ class SortableTable extends HTML_Table {
      * Get the parameter-string with additional parameters to use in the URLs
      * generated by this SortableTable
      */
-    public function get_additional_url_paramstring () {
+    public function get_additional_url_paramstring()
+    {
         $param_string_parts = array ();
         if (is_array($this->additional_parameters) && count($this->additional_parameters) > 0) {
             foreach ($this->additional_parameters as $key => & $value) {
@@ -745,13 +727,13 @@ class SortableTable extends HTML_Table {
             }
         }
         $result = implode('&amp;', $param_string_parts);
-        foreach ($this->other_tables as $index => & $tablename) {
+        foreach ($this->other_tables as & $tablename) {
             $param = array();
             if (isset($_GET[$tablename.'_direction'])) {
                 //$param[$tablename.'_direction'] = $_GET[$tablename.'_direction'];
                 $my_get_direction = $_GET[$tablename.'_direction'];
                 if (!in_array($my_get_direction, array('ASC', 'DESC'))) {
-                     $param[$tablename.'_direction'] =  'ASC';
+                    $param[$tablename.'_direction'] =  'ASC';
                 } else {
                     $param[$tablename.'_direction'] = $my_get_direction;
                 }
@@ -779,7 +761,8 @@ class SortableTable extends HTML_Table {
      * Get the parameter-string with the SortableTable-related parameters to use
      * in URLs
      */
-    public function get_sortable_table_param_string () {
+    public function get_sortable_table_param_string()
+    {
         $param[$this->param_prefix.'direction'] = $this->direction;
         $param[$this->param_prefix.'page_nr'] = $this->page_nr;
         $param[$this->param_prefix.'per_page'] = $this->per_page;
@@ -799,7 +782,8 @@ class SortableTable extends HTML_Table {
      * @param string $function The name of the filter-function. This should be a
      * function wich requires 1 parameter and returns the filtered value.
      */
-    public function set_column_filter ($column, $function) {
+    public function set_column_filter($column, $function)
+    {
         $this->column_filters[$column] = $function;
     }
 
@@ -812,7 +796,8 @@ class SortableTable extends HTML_Table {
      * @param string $checkbox_name The name of the generated checkboxes. The
      * value of the checkbox will be the value of the first column.
      */
-    public function set_form_actions ($actions, $checkbox_name = 'id') {
+    public function set_form_actions($actions, $checkbox_name = 'id')
+    {
         $this->form_actions = $actions;
         $this->checkbox_name = $checkbox_name;
     }
@@ -822,7 +807,8 @@ class SortableTable extends HTML_Table {
      * <code>$parameters['action'] = 'test'; will be convert in <input type="hidden" name="action" value="test"></code>
      * @param array $parameters
      */
-    public function set_additional_parameters ($parameters) {
+    public function set_additional_parameters($parameters)
+    {
         $this->additional_parameters = $parameters;
     }
     /**
@@ -860,11 +846,10 @@ class SortableTable extends HTML_Table {
                 $row[0] .= '/>';
             }
         }
-        if (is_array($row)) {
-            foreach ($row as & $value) {
-                if (empty($value)) {
-                     $value = '-';
-                }
+
+        foreach ($row as $index => & $value) {
+            if (empty($value)) {
+                $value = '-';
             }
         }
         return $row;
@@ -908,7 +893,8 @@ class SortableTable extends HTML_Table {
  * Sortable table which can be used for data available in an array
  * @package chamilo.library
  */
-class SortableTableFromArray extends SortableTable {
+class SortableTableFromArray extends SortableTable
+{
     /**
      * The array containing all data for this table
      */
@@ -920,8 +906,9 @@ class SortableTableFromArray extends SortableTable {
      * @param int $default_column
      * @param int $default_items_per_page
      */
-    public function __construct($table_data, $default_column = 1, $default_items_per_page = 20, $tablename = 'tablename', $get_total_number_function = null) {
-        parent :: __construct ($tablename, $get_total_number_function, null, $default_column, $default_items_per_page);
+    public function __construct($table_data, $default_column = 1, $default_items_per_page = 20, $tablename = 'tablename')
+    {
+        parent :: __construct ($tablename, null, null, $default_column, $default_items_per_page);
         $this->table_data = $table_data;
     }
 
@@ -929,7 +916,8 @@ class SortableTableFromArray extends SortableTable {
      * Get table data to show on current page
      * @see SortableTable#get_table_data
      */
-    public function get_table_data($from = 1, $per_page = null, $column = null, $direction = null, $sort = true) {
+    public function get_table_data($from = 1, $per_page = null, $column = null, $direction = null, $sort = true)
+    {
         if ($sort) {
             $content = TableSort :: sort_table($this->table_data, $this->column, $this->direction == 'ASC' ? SORT_ASC : SORT_DESC);
         } else {
@@ -944,11 +932,7 @@ class SortableTableFromArray extends SortableTable {
      */
     public function get_total_number_of_items()
     {
-        if (isset($this->total_number_of_items) && !empty($this->total_number_of_items)) {
-            return $this->total_number_of_items;
-        } else {
-            return count($this->table_data);
-        }
+        return count($this->table_data);
     }
 }
 
@@ -964,7 +948,8 @@ class SortableTableFromArray extends SortableTable {
  * @package chamilo.library
  */
 
-class SortableTableFromArrayConfig extends SortableTable {
+class SortableTableFromArrayConfig extends SortableTable
+{
     /**
      * The array containing the columns that will be show i.e $column_show=array('1','0','0'); we will show only the 1st column
      */
@@ -991,7 +976,8 @@ class SortableTableFromArrayConfig extends SortableTable {
      * @param array $column_order An array of integers that let us decide how the columns are going to be sort.
      * @param bool special modification to fix the document name order
      */
-    public function __construct ($table_data, $default_column = 1, $default_items_per_page = 20, $tablename = 'tablename', $column_show = null, $column_order = null, $direction = 'ASC', $doc_filter = false) {
+    public function __construct($table_data, $default_column = 1, $default_items_per_page = 20, $tablename = 'tablename', $column_show = null, $column_order = null, $direction = 'ASC', $doc_filter = false)
+    {
         $this->column_show  = $column_show;
         $this->column_order = $column_order;
         $this->doc_filter   = $doc_filter;
@@ -1003,7 +989,8 @@ class SortableTableFromArrayConfig extends SortableTable {
      * Get table data to show on current page
      * @see SortableTable#get_table_data
      */
-    public function get_table_data($from = 1, $per_page = null, $column = null, $direction = null, $sort = true) {
+    public function get_table_data($from = 1, $per_page = null, $column = null, $direction = null, $sort = true)
+    {
         $content = TableSort :: sort_table_config($this->table_data, $this->column, $this->direction == 'ASC' ? SORT_ASC : SORT_DESC, $this->column_show, $this->column_order, SORT_REGULAR, $this->doc_filter);
         return array_slice($content, $from, $this->per_page);
     }
@@ -1012,7 +999,8 @@ class SortableTableFromArrayConfig extends SortableTable {
      * Get total number of items
      * @see SortableTable#get_total_number_of_items
      */
-    public function get_total_number_of_items() {
+    public function get_total_number_of_items()
+    {
         return count($this->table_data);
     }
 }

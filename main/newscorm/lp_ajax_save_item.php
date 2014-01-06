@@ -20,7 +20,13 @@ $use_anonymous = true;
 // Name of the language file that needs to be included.
 $language_file[] = 'learnpath';
 
-require_once 'back_compat.inc.php';
+// Including the global initialization file.
+require_once '../inc/global.inc.php';
+
+$app['template.show_footer'] = false;
+$app['template.show_header'] = false;
+$app['default_layout'] = 'default/layout/blank.tpl';
+
 require_once 'learnpath.class.php';
 require_once 'scorm.class.php';
 require_once 'aicc.class.php';
@@ -47,6 +53,7 @@ require_once 'aiccItem.class.php';
 function save_item($lp_id, $user_id, $view_id, $item_id, $score = -1, $max = -1, $min = -1, $status = '', $time = 0, $suspend = '', $location = '', $interactions = array(), $core_exit = 'none')
 {
     $return = null;
+    global $debug;
 
     if ($debug > 0) {
         error_log('lp_ajax_save_item.php : save_item() params: ');
@@ -83,8 +90,12 @@ function save_item($lp_id, $user_id, $view_id, $item_id, $score = -1, $max = -1,
     }
 
     $prereq_check = $mylp->prerequisites_match($item_id);
+    $check_attempts = $mylp->check_item_attempts($item_id);
 
-    /** @var learnpathItem $mylpi */
+    if (!$check_attempts) {
+        return false;
+    }
+
     $mylpi = $mylp->items[$item_id];
 
     if (empty($mylpi)) {
@@ -165,11 +176,13 @@ function save_item($lp_id, $user_id, $view_id, $item_id, $score = -1, $max = -1,
             }
             //if ($debug > 1) { error_log('Done calling set_time - now '.$mylpi->get_total_time(), 0); }
         } else {
+            //Fixes time when loading hotpotatoes see #3343
             $time = $mylpi->get_total_time();
+            $mylpi->set_time($time, 'int');
         }
 
         if (isset($suspend) && $suspend != '' && $suspend != 'undefined') {
-            $mylpi->current_data = $suspend; //escapetxt($suspend);
+            $mylpi->current_data = $suspend;
         }
 
         if (isset($location) && $location != '' && $location!='undefined') {
@@ -243,7 +256,7 @@ function save_item($lp_id, $user_id, $view_id, $item_id, $score = -1, $max = -1,
 
     if (!isset($_SESSION['login_as'])) {
         // If $_SESSION['login_as'] is set, then the user is an admin logged as the user.
-        $tbl_track_login = Database :: get_statistic_table(TABLE_STATISTIC_TRACK_E_LOGIN);
+        $tbl_track_login = Database :: get_main_table(TABLE_STATISTIC_TRACK_E_LOGIN);
 
         $sql_last_connection = "SELECT login_id, login_date
             FROM $tbl_track_login
@@ -286,17 +299,16 @@ if (isset($_REQUEST['interact'])) {
 }
 
 echo save_item(
-    (!empty($_REQUEST['lid'])?$_REQUEST['lid']:null),
-    (!empty($_REQUEST['uid'])?$_REQUEST['uid']:null),
-    (!empty($_REQUEST['vid'])?$_REQUEST['vid']:null),
-    (!empty($_REQUEST['iid'])?$_REQUEST['iid']:null),
-    (!empty($_REQUEST['s'])?$_REQUEST['s']:null),
-    (!empty($_REQUEST['max'])?$_REQUEST['max']:null),
-    (!empty($_REQUEST['min'])?$_REQUEST['min']:null),
-    (!empty($_REQUEST['status'])?$_REQUEST['status']:null),
-    (!empty($_REQUEST['t'])?$_REQUEST['t']:null),
-    (!empty($_REQUEST['suspend'])?$_REQUEST['suspend']:null),
-    (!empty($_REQUEST['loc'])?$_REQUEST['loc']:null),
-    $interactions,
-    (!empty($_REQUEST['core_exit'])?$_REQUEST['core_exit']:'')
-);
+            (!empty($_REQUEST['lid'])?$_REQUEST['lid']:null),
+            (!empty($_REQUEST['uid'])?$_REQUEST['uid']:null),
+            (!empty($_REQUEST['vid'])?$_REQUEST['vid']:null),
+            (!empty($_REQUEST['iid'])?$_REQUEST['iid']:null),
+            (!empty($_REQUEST['s'])?$_REQUEST['s']:null),
+            (!empty($_REQUEST['max'])?$_REQUEST['max']:null),
+            (!empty($_REQUEST['min'])?$_REQUEST['min']:null),
+            (!empty($_REQUEST['status'])?$_REQUEST['status']:null),
+            (!empty($_REQUEST['t'])?$_REQUEST['t']:null),
+            (!empty($_REQUEST['suspend'])?$_REQUEST['suspend']:null),
+            (!empty($_REQUEST['loc'])?$_REQUEST['loc']:null),
+            $interactions,
+            (!empty($_REQUEST['core_exit'])?$_REQUEST['core_exit']:''));

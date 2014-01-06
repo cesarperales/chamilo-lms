@@ -16,24 +16,22 @@ if (api_get_setting('allow_social_tool') !='true') {
     api_not_allowed();
 }
 
-require_once api_get_path(LIBRARY_PATH).'group_portal_manager.lib.php';
-
 $this_section = SECTION_SOCIAL;
 $interbreadcrumb[]= array ('url' =>'home.php','name' => get_lang('Social'));
 $interbreadcrumb[] = array('url' => 'groups.php','name' => get_lang('Groups'));
 $interbreadcrumb[] = array('url' => '#','name' => get_lang('MemberList'));
 
-$group_id	= intval($_GET['id']);
-
+$group_id = intval($_GET['id']);
+$usergroup = new UserGroup();
 //todo @this validation could be in a function in group_portal_manager
 if (empty($group_id)) {
 	api_not_allowed();
 } else {
-	$group_info = GroupPortalManager::get_group_data($group_id);
+	$group_info = $usergroup->get($group_id);
 	if (empty($group_info)) {
 		api_not_allowed();
 	}
-	$user_role = GroupPortalManager::get_user_group_role(api_get_user_id(), $group_id);
+	$user_role = $usergroup->get_user_group_role(api_get_user_id(), $group_id);
 	if (!in_array($user_role, array(GROUP_USER_PERMISSION_ADMIN, GROUP_USER_PERMISSION_MODERATOR, GROUP_USER_PERMISSION_READER))) {
 		api_not_allowed();
 	}
@@ -45,8 +43,8 @@ if (isset($_GET['action']) && $_GET['action']=='add') {
 	// we add a user only if is a open group
 	$user_join = intval($_GET['u']);
 	//if i'm a moderator
-	if (GroupPortalManager::is_group_moderator($group_id)) {
-		GroupPortalManager::update_user_role($user_join, $group_id);
+	if ($usergroup->is_group_moderator($group_id)) {
+        $usergroup->update_user_role($user_join, $group_id);
 		$show_message = get_lang('UserAdded');
 	}
 }
@@ -55,8 +53,8 @@ if (isset($_GET['action']) && $_GET['action']=='delete') {
 	// we add a user only if is a open group
 	$user_join = intval($_GET['u']);
 	//if i'm a moderator
-	if (GroupPortalManager::is_group_moderator($group_id)) {
-		GroupPortalManager::delete_user_rel_group($user_join, $group_id);
+	if ($usergroup->is_group_moderator($group_id)) {
+		$usergroup->delete_user_rel_group($user_join, $group_id);
 		$show_message = Display::return_message(get_lang('UserDeleted'));
 	}
 }
@@ -65,8 +63,8 @@ if (isset($_GET['action']) && $_GET['action']=='set_moderator') {
 	// we add a user only if is a open group
 	$user_moderator= intval($_GET['u']);
 	//if i'm the admin
-	if (GroupPortalManager::is_group_admin($group_id)) {
-		GroupPortalManager::update_user_role($user_moderator, $group_id, GROUP_USER_PERMISSION_MODERATOR);
+	if ($usergroup->is_group_admin($group_id)) {
+		$usergroup->update_user_role($user_moderator, $group_id, GROUP_USER_PERMISSION_MODERATOR);
 		$show_message = Display::return_message(get_lang('UserChangeToModerator'));
 	}
 }
@@ -75,20 +73,18 @@ if (isset($_GET['action']) && $_GET['action']=='delete_moderator') {
 	// we add a user only if is a open group
 	$user_moderator= intval($_GET['u']);
 	//only group admins can do that
-	if (GroupPortalManager::is_group_admin($group_id)) {
-		GroupPortalManager::update_user_role($user_moderator, $group_id, GROUP_USER_PERMISSION_READER);
+	if ($usergroup->is_group_admin($group_id)) {
+		$usergroup->update_user_role($user_moderator, $group_id, GROUP_USER_PERMISSION_READER);
 		$show_message = Display::return_message(get_lang('UserChangeToReader'));
 	}
 }
 
-$users	= GroupPortalManager::get_users_by_group($group_id, false, array(GROUP_USER_PERMISSION_ADMIN, GROUP_USER_PERMISSION_READER, GROUP_USER_PERMISSION_MODERATOR), 0 , 1000);
+$users	= $usergroup->get_users_by_group($group_id, false, array(GROUP_USER_PERMISSION_ADMIN, GROUP_USER_PERMISSION_READER, GROUP_USER_PERMISSION_MODERATOR), 0 , 1000);
 $new_member_list = array();
 
 $social_left_content = SocialManager::show_social_menu('member_list',$group_id);
 
 $social_right_content = '<h2>'.$group_info['name'].'</h2>';
-
-$social_right_content .= '<div style="width:90%">';
 
 foreach($users as $user) {
     switch ($user['relation_type']) {
@@ -120,22 +116,17 @@ foreach($users as $user) {
     $new_member_list[] = $user;
 }
 if (count($new_member_list) > 0) {
-    $social_right_content .= Display::return_sortable_grid(
-        'list_members',
-        array(),
-        $new_member_list,
-        array('hide_navigation'=>true, 'per_page' => 100),
-        array(),
-        false,
-        array(true, false, true, true, false, true, true)
-    );
+    $social_right_content .= Display::return_sortable_grid('list_members', array(), $new_member_list, array('hide_navigation'=>true, 'per_page' => 100), null, false, array(true, false, true,true,false,true,true));
 }
-$social_right_content .= '</div>';
 
-$tpl = new Template($tool_name);
-$tpl->set_help('Groups');
+$social_right_content = '<div class="span9">'.$social_right_content.'</div>';
+
+$app['title'] = get_lang('Social');
+$tpl = $app['template'];
+
+$tpl->setHelp('Groups');
 $tpl->assign('social_left_content', $social_left_content);
 $tpl->assign('social_right_content', $social_right_content);
-
+$tpl->assign('message', $show_message);
 $social_layout = $tpl->get_template('layout/social_layout.tpl');
 $tpl->display($social_layout);

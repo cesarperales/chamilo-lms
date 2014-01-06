@@ -13,10 +13,10 @@
  * Code
  */
 // name of the language file that needs to be included
-$language_file='exercice';
+$language_file = 'exercice';
 
 // name of the language file that needs to be included
-include('../inc/global.inc.php');
+require_once '../inc/global.inc.php';
 
 // including additional libraries
 require_once 'exercise.class.php';
@@ -25,7 +25,6 @@ require_once 'answer.class.php';
 
 //debug param. 0: no display - 1: debug display
 $debug=0;
-if($debug>0){echo str_repeat('&nbsp;',0).'Entered exercise_result.php'."<br />\n";var_dump($_POST);}
 
 // general parameters passed via POST/GET
 $my_course_code = $_GET['cid'];
@@ -83,15 +82,17 @@ $nameTools=get_lang('Exercice');
 $interbreadcrumb[]=array("url" => "exercice.php","name" => get_lang('Exercices'));
 
 $my_msg = 'No change.';
-
+$courseId = api_get_course_int_id();
 if ($action == 'mark') {
 	if (!empty($_POST['score']) AND $_POST['score'] < $obj_question->selectWeighting() AND $_POST['score'] >= 0) {
 		//mark the user mark into the database using something similar to the following function:
 
-		$exercise_table = Database::get_statistic_table('track_e_exercices');
+		$exercise_table = Database::get_main_table('track_e_exercices');
 		#global $origin, $tbl_learnpath_user, $learnpath_id, $learnpath_item_id;
 		$sql = "SELECT * FROM $exercise_table
-			    WHERE exe_user_id = '".Database::escape_string($my_usr)."' AND exe_cours_id = '".Database::escape_string($my_cid)."' AND exe_exo_id = '".Database::escape_string($my_exe)."'
+			    WHERE   exe_user_id = '".Database::escape_string($my_usr)."' AND
+			            c_id = '".$courseId."' AND
+			            exe_exo_id = '".Database::escape_string($my_exe)."'
 			    ORDER BY exe_date DESC";
 		#echo $sql;
 		$res = Database::query($sql);
@@ -107,21 +108,21 @@ if ($action == 'mark') {
 			$my_msg = get_lang('MarkIsUpdated');
 		} else {
 			$my_score = $_POST['score'];
-			$reallyNow = time();
+			$reallyNow = api_get_utc_datetime();
 			$sql = "INSERT INTO $exercise_table (
 					   exe_user_id,
-					   exe_cours_id,
+					   c_id,
 					   exe_exo_id,
 					   exe_result,
 					   exe_weighting,
 					   exe_date
 					  ) VALUES (
 					   '".Database::escape_string($my_usr)."',
-					   '".Database::escape_string($my_cid)."',
+					   '".$courseId."',
 					   '".Database::escape_string($my_exe)."',
 					   '".Database::escape_string($my_score)."',
 					   '".Database::escape_string($obj_question->selectWeighting())."',
-					   FROM_UNIXTIME(".$reallyNow.")
+					   ".$reallyNow."
 					  )";
 			#if ($origin == 'learnpath')
 			#{
@@ -136,7 +137,7 @@ if ($action == 'mark') {
 			$my_msg = get_lang('MarkInserted');
 		}
 		//Database::query($sql);
-		//return 0;		
+		//return 0;
 	} else {
 		$my_msg .= get_lang('TotalScoreTooBig');
 	}

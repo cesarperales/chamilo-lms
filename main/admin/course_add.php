@@ -16,9 +16,6 @@ $this_section = SECTION_PLATFORM_ADMIN;
 
 api_protect_admin_script();
 
-require_once api_get_path(LIBRARY_PATH).'fileManage.lib.php';
-require_once api_get_path(LIBRARY_PATH).'course_category.lib.php';
-
 $tool_name = get_lang('AddCourse');
 $interbreadcrumb[] = array('url' => 'index.php', 'name' => get_lang('PlatformAdmin'));
 $interbreadcrumb[] = array('url' => 'course_list.php', 'name' => get_lang('CourseList'));
@@ -31,7 +28,7 @@ $order_clause = api_sort_by_first_name() ? ' ORDER BY firstname, lastname' : ' O
 $table_user = Database :: get_main_table(TABLE_MAIN_USER);
 $sql = "SELECT user_id,lastname,firstname FROM $table_user WHERE status=1".$order_clause;
 // Filtering teachers when creating a course.
-if ($_configuration['multiple_access_urls']) {
+if (api_is_multiple_url_enabled()) {
     $access_url_rel_user_table= Database :: get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
     $sql = "SELECT u.user_id,lastname,firstname FROM $table_user as u
             INNER JOIN $access_url_rel_user_table url_rel_user
@@ -54,7 +51,7 @@ $form->applyFilter('title', 'html_filter');
 $form->applyFilter('title', 'trim');
 
 // Code
-$form->add_textfield('visual_code', array(get_lang('CourseCode'), get_lang('OnlyLettersAndNumbers')) , false, array('class' => 'span3', 'maxlength' => CourseManager::MAX_COURSE_LENGTH_CODE));
+$form->add_textfield('visual_code', array(get_lang('CourseCode'), get_lang('OnlyLettersAndNumbers')), false, array('class' => 'span3', 'maxlength' => CourseManager::MAX_COURSE_LENGTH_CODE));
 
 $form->applyFilter('visual_code', 'api_strtoupper');
 $form->applyFilter('visual_code', 'html_filter');
@@ -63,19 +60,11 @@ $form->addRule('visual_code', get_lang('Max'), 'maxlength', CourseManager::MAX_C
 $form->addElement('select', 'course_teachers', get_lang('CourseTeachers'), $teachers, ' id="course_teachers" class="chzn-select"  style="width:350px" multiple="multiple" ');
 $form->applyFilter('course_teachers', 'html_filter');
 
-// Category code
-$url = api_get_path(WEB_AJAX_PATH).'course.ajax.php?a=search_category';
-
-$form->addElement(
-    'select_ajax',
-    'category_code',
-    get_lang('CourseFaculty'),
-    null,
-    array(
-        'url' => $url
-    //    'formatResult' => 'function(item) { return item.name + "'" +item.code; }'
-    )
-);
+$categories_select = $form->addElement('select', 'category_code', get_lang('CourseFaculty'), array(), array('style' => 'width:350px', 'class'=>'chzn-select', 'id'=>'category_code'));
+$categories_select->addOption('-','');
+$form->applyFilter('category_code', 'html_filter');
+//This function fills the category_code select ...
+CourseManager::select_and_sort_categories($categories_select);
 
 // Course department
 $form->add_textfield('department_name', get_lang('CourseDepartment'), false, array ('size' => '60'));
@@ -138,20 +127,15 @@ $form->setDefaults($values);
 // Validate the form
 if ($form->validate()) {
     $course          = $form->exportValues();
-    $teacher_id      = $course['tutor_id'];
-    $course_teachers = $course['course_teachers'];
-
+    //$tutor_name      = $teachers[$course['tutor_id']];
+    $course['user_id']      = isset($course['tutor_id']) ? $course['tutor_id'] : null;
+    $course['teachers']  = isset($course['course_teachers']) ? $course['course_teachers'] : null;
     $course['disk_quota'] = $course['disk_quota']*1024*1024;
-
     $course['exemplary_content']    = empty($course['exemplary_content']) ? false : true;
-    $course['teachers']             = $course_teachers;
-    $course['user_id']              = $teacher_id;
+    //$course['tutor_name']           = $tutor_name;
     $course['wanted_code']          = $course['visual_code'];
     $course['gradebook_model_id']   = isset($course['gradebook_model_id']) ? $course['gradebook_model_id'] : null;
-    // Fixing category code
-    $course['course_category'] = $course['category_code'];
     $course_info = CourseManager::create_course($course);
-
     header('Location: course_list.php'.($course_info===false?'?action=show_msg&warn='.api_get_last_failure():''));
     exit;
 }
@@ -159,6 +143,7 @@ if ($form->validate()) {
 // Display the form.
 $content = $form->return_form();
 
-$tpl = new Template($tool_name);
+$tpl = $app['template'];
+$app['title'] = $tool_name;
 $tpl->assign('content', $content);
 $tpl->display_one_col_template();

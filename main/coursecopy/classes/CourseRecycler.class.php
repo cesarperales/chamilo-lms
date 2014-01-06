@@ -81,7 +81,7 @@ class CourseRecycler
         if ($this->course->has_resources(RESOURCE_DOCUMENT)) {
             $table = Database :: get_course_table(TABLE_DOCUMENT);
             foreach ($this->course->resources[RESOURCE_DOCUMENT] as $id => $document) {
-                rmdirr($this->course->backup_path.'/'.$document->path);
+                api_rmdirr($this->course->backup_path.'/'.$document->path);
             }
             $ids = implode(',', (array_keys($this->course->resources[RESOURCE_DOCUMENT])));
             $sql = "DELETE FROM ".$table." WHERE c_id = ".$this->course_id." AND id IN(".$ids.")";
@@ -313,10 +313,11 @@ class CourseRecycler
             $table_qui 	   = Database :: get_course_table(TABLE_QUIZ_TEST);
             $table_rel 	   = Database :: get_course_table(TABLE_QUIZ_TEST_QUESTION);
             $table_qui_que_opt = Database :: get_course_table(TABLE_QUIZ_QUESTION_OPTION);
-            $table_qui_que_cat = Database :: get_course_table(TABLE_QUIZ_QUESTION_CATEGORY);
+            $table_qui_que_cat = Database :: get_course_table(TABLE_QUIZ_QUESTION_REL_CATEGORY);
             $table_qui_que_rel_cat = Database :: get_course_table(TABLE_QUIZ_QUESTION_REL_CATEGORY);
 
             $ids = array_keys($this->course->resources[RESOURCE_QUIZ]);
+            $ids = array_filter($ids);
             // If the value "-1" is in the ids of elements (questions) to
             // be deleted, then consider all orphan questions should be deleted
             // This value is set in CourseBuilder::quiz_build_questions()
@@ -326,7 +327,7 @@ class CourseRecycler
             if (!empty($ids)) {
                 // Deletion of the tests first. Questions in these tests are
                 //   not deleted and become orphan at this point
-                $sql = "DELETE FROM ".$table_qui." WHERE c_id = ".$this->course_id." AND id IN(".$ids.")";
+                $sql = "DELETE FROM ".$table_qui." WHERE c_id = ".$this->course_id." AND iid IN(".$ids.")";
                 Database::query($sql);
                 $sql = "DELETE FROM ".$table_rel." WHERE c_id = ".$this->course_id." AND exercice_id IN(".$ids.")";
                 Database::query($sql);
@@ -335,40 +336,42 @@ class CourseRecycler
             // Identifying again and deletion of the orphan questions, if it was desired.
             if ($delete_orphan_questions) {
 
+
+                //@todo fix query in order to use iid
                 $sql = " (
-                        SELECT q.id, ex.c_id FROM $table_qui_que q
-                        INNER JOIN $table_rel r
-                        ON (q.c_id = r.c_id AND q.id = r.question_id)
-                        INNER JOIN $table_qui ex
-                        ON (ex.id = r.exercice_id AND ex.c_id = r.c_id)
-                        WHERE ex.c_id = ".$this->course_id." AND (ex.active = '-1' OR ex.id = '-1')
-                    )
-                    UNION
-                    (
-                        SELECT q.id, r.c_id FROM $table_qui_que q
-                        LEFT OUTER JOIN $table_rel r
-                        ON (q.c_id = r.c_id AND q.id = r.question_id)
-                        WHERE q.c_id = ".$this->course_id." AND r.question_id is null
-                    )
-                    UNION
-                    (
-                        SELECT q.id, r.c_id FROM $table_qui_que q
-                        INNER JOIN $table_rel r
-                        ON (q.c_id = r.c_id AND q.id = r.question_id)
-                        WHERE r.c_id = ".$this->course_id." AND (r.exercice_id = '-1' OR r.exercice_id = '0')
-                    )";
+                    SELECT q.iid FROM $table_qui_que q
+                    INNER JOIN $table_rel r
+                    ON (q.c_id = r.c_id AND q.iid = r.question_id)
+                    INNER JOIN $table_qui ex
+                    ON (ex.iid = r.exercice_id AND ex.c_id = r.c_id )
+                    WHERE ex.c_id = ".$this->course_id." AND (ex.active = '-1' OR ex.iid = '-1')
+                )
+                UNION
+                (
+                    SELECT q.iid FROM $table_qui_que q
+                    LEFT OUTER JOIN $table_rel r
+                    ON (q.c_id = r.c_id AND q.iid = r.question_id)
+                    WHERE q.c_id = ".$this->course_id." AND r.question_id is null
+                )
+                UNION
+                (
+                    SELECT q.iid FROM $table_qui_que q
+                    INNER JOIN $table_rel r
+                    ON (q.c_id = r.c_id AND q.iid = r.question_id)
+                    WHERE r.c_id = ".$this->course_id." AND (r.exercice_id = '-1' OR r.exercice_id = '0')
+                )";
                 $db_result = Database::query($sql);
                 if (Database::num_rows($db_result) > 0) {
                     $orphan_ids = array();
                     while ($obj = Database::fetch_object($db_result)) {
-                        $orphan_ids[] = $obj->id;
+                        $orphan_ids[] = $obj->iid;
                     }
                     $orphan_ids = implode(',', $orphan_ids);
                     $sql = "DELETE FROM ".$table_rel." WHERE c_id = ".$this->course_id." AND question_id IN(".$orphan_ids.")";
                     Database::query($sql);
-                    $sql = "DELETE FROM ".$table_qui_ans." WHERE c_id = ".$this->course_id." AND question_id IN(".$orphan_ids.")";
+                    $sql = "DELETE FROM ".$table_qui_ans." WHERE question_id IN(".$orphan_ids.")";
                     Database::query($sql);
-                    $sql = "DELETE FROM ".$table_qui_que." WHERE c_id = ".$this->course_id." AND id IN(".$orphan_ids.")";
+                    $sql = "DELETE FROM ".$table_qui_que." WHERE c_id = ".$this->course_id." AND iid IN(".$orphan_ids.")";
                     Database::query($sql);
                 }
                 // Also delete questions categories and options
@@ -400,7 +403,8 @@ class CourseRecycler
     /**
      * Recycle surveys - removes everything
      */
-    function recycle_surveys() {
+    function recycle_surveys()
+    {
         if ($this->course->has_resources(RESOURCE_SURVEY)) {
             $table_survey = Database :: get_course_table(TABLE_SURVEY);
             $table_survey_q = Database :: get_course_table(TABLE_SURVEY_QUESTION);
@@ -423,7 +427,8 @@ class CourseRecycler
     /**
      * Recycle learnpaths
      */
-    function recycle_learnpaths() {
+    function recycle_learnpaths()
+    {
         if ($this->course->has_resources(RESOURCE_LEARNPATH)) {
             $table_main = Database :: get_course_table(TABLE_LP_MAIN);
             $table_item = Database :: get_course_table(TABLE_LP_ITEM);
@@ -441,7 +446,7 @@ class CourseRecycler
                     {
                         // The directory trat contains files of the SCORM package is to be deleted.
                         $scorm_package_dir = realpath($this->course->path . 'scorm/' . $learnpath->path);
-                        rmdirr($scorm_package_dir);
+                        api_rmdirr($scorm_package_dir);
                     }
                 }
 
@@ -522,7 +527,8 @@ class CourseRecycler
     /**
     * Recycle Attendances
     */
-    function recycle_attendance($session_id = 0) {
+    function recycle_attendance($session_id = 0)
+    {
         if ($this->course->has_resources(RESOURCE_ATTENDANCE)) {
             $table_attendance          = Database :: get_course_table(TABLE_ATTENDANCE);
             $table_attendance_calendar = Database :: get_course_table(TABLE_ATTENDANCE_CALENDAR);
@@ -541,10 +547,12 @@ class CourseRecycler
             }
         }
     }
+
     /**
      * Recycle Works
      */
-    function recycle_work($session_id = 0) {
+    function recycle_work($session_id = 0)
+    {
         if ($this->course->has_resources(RESOURCE_WORK)) {
             $table_work          = Database :: get_course_table(TABLE_STUDENT_PUBLICATION);
             $table_work_assignment = Database :: get_course_table(TABLE_STUDENT_PUBLICATION_ASSIGNMENT);

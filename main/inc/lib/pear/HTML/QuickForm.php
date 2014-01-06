@@ -38,8 +38,7 @@ require_once 'HTML/Common.php';
  *      HTML_QuickForm::isTypeRegistered()
  * @global array $GLOBALS['HTML_QUICKFORM_ELEMENT_TYPES']
  */
-$GLOBALS['HTML_QUICKFORM_ELEMENT_TYPES'] =
-array(
+$GLOBALS['HTML_QUICKFORM_ELEMENT_TYPES'] = array(
     'group'             => array('HTML/QuickForm/group.php','HTML_QuickForm_group'),
     'hidden'            => array('HTML/QuickForm/hidden.php','HTML_QuickForm_hidden'),
     'reset'             => array('HTML/QuickForm/reset.php','HTML_QuickForm_reset'),
@@ -65,7 +64,9 @@ array(
     'xbutton'           => array('HTML/QuickForm/xbutton.php','HTML_QuickForm_xbutton'),
     'advanced_settings' => array('HTML/QuickForm/advanced_settings.php','HTML_QuickForm_advanced_settings'),
     'label'             => array('HTML/QuickForm/label.php','HTML_QuickForm_label'),
-    'email'             => array('HTML/QuickForm/email.php','HTML_QuickForm_email')
+    'email'             => array('HTML/QuickForm/email.php','HTML_QuickForm_email'),
+    'advmultiselect'    => array('HTML/QuickForm/advmultiselect.php','HTML_QuickForm_advmultiselect'),
+    'captcha'           => array('HTML/QuickForm/CAPTCHA.php','HTML_QuickForm_advmultiselect')
 );
 
 /**
@@ -119,6 +120,14 @@ define('QUICKFORM_INVALID_DATASOURCE',     -9);
 /**#@-*/
 
 // }}}
+
+/**
+ * Basic error codes
+ *
+ * @var        integer
+ * @since      1.5.0
+ */
+define('HTML_QUICKFORM_ADVMULTISELECT_ERROR_INVALID_INPUT', 1);
 
 /**
  * Create, validate and process HTML forms
@@ -276,6 +285,14 @@ class HTML_QuickForm extends HTML_Common
      * @access    private
      */
     var $_flagSubmitted = false;
+
+    /**
+     * If false disables the fckeditor HTML and show textareas
+     * @var bool
+     */
+    public $allowRichEditorInForm = true;
+
+    public $allowedRichEditorList = array();
 
     // }}}
     // {{{ constructor
@@ -616,12 +633,14 @@ class HTML_QuickForm extends HTML_Common
             $error = PEAR::raiseError(null, QUICKFORM_UNREGISTERED_ELEMENT, null, E_USER_WARNING, "Element '$type' does not exist in HTML_QuickForm::_loadElement()", 'HTML_QuickForm_Error', true);
             return $error;
         }
+
         $className = $GLOBALS['HTML_QUICKFORM_ELEMENT_TYPES'][$type][1];
         $includeFile = $GLOBALS['HTML_QUICKFORM_ELEMENT_TYPES'][$type][0];
 
         include_once $includeFile;
         // Modified by Ivan Tcholakov, 16-MAR-2010. Suppressing a deprecation warning on PHP 5.3
         //$elementObject =& new $className();
+
         $elementObject = new $className();
 
         for ($i = 0; $i < 5; $i++) {
@@ -1708,10 +1727,19 @@ class HTML_QuickForm extends HTML_Common
     */
     function accept(&$renderer) {
         $renderer->startForm($this);
+
         foreach (array_keys($this->_elements) as $key) {
-            $element =& $this->_elements[$key];
+            $element = &$this->_elements[$key];
             $elementName = $element->getName();
-            $required    = ($this->isElementRequired($elementName) && !$element->isFrozen());
+            if ($this->getAllowRichEditorInForm() == false) {
+                if ($element->getType() == 'html_editor') {
+                    if (!in_array($elementName, $this->getAllowedRichEditorList())) {
+                        $element->setRichEditorStatus(false);
+                    }
+                }
+            }
+
+            $required    = $this->isElementRequired($elementName) && !$element->isFrozen();
             $error       = $this->getElementError($elementName);
             $element->accept($renderer, $required, $error);
         }
@@ -2048,6 +2076,33 @@ class HTML_QuickForm extends HTML_Common
         return isset($errorMessages[$value]) ? $errorMessages[$value] : $errorMessages[QUICKFORM_ERROR];
     } // end func errorMessage
 
+    /**
+     *
+     * @param bool $status
+     */
+    public function setAllowRichEditorInForm($status) {
+       $this->allowRichEditorInForm = (bool)$status;
+    }
+
+    /**
+     * Returns the rich editor status
+     * @return bool status
+     */
+    public function getAllowRichEditorInForm()
+    {
+        return $this->allowRichEditorInForm;
+    }
+
+    public function setAllowedRichEditorList($array)
+    {
+        $this->allowedRichEditorList = $array;
+    }
+
+    public function getAllowedRichEditorList()
+    {
+        return $this->allowedRichEditorList;
+    }
+
     // }}}
 } // end class HTML_QuickForm
 
@@ -2092,4 +2147,3 @@ class HTML_QuickForm_Error extends PEAR_Error {
     }
     // }}}
 } // end class HTML_QuickForm_Error
-?>

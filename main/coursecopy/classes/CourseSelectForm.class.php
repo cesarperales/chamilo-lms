@@ -37,17 +37,19 @@ class CourseSelectForm
 		$resource_titles[RESOURCE_THEMATIC]             = get_lang('Thematic');
 		$resource_titles[RESOURCE_ATTENDANCE]           = get_lang('Attendance');
         $resource_titles[RESOURCE_WORK]                 = get_lang('ToolStudentPublication');
+
+        $iconPath = api_get_path(WEB_IMG_PATH);
 ?>
 		<script>
 			function exp(item) {
 				el = document.getElementById('div_'+item);
 				if (el.style.display=='none'){
 					el.style.display='';
-					document.getElementById('img_'+item).src='../img/1.gif';
+					document.getElementById('img_'+item).src='<?php echo $iconPath; ?>1.gif';
 				}
 				else{
 					el.style.display='none';
-					document.getElementById('img_'+item).src='../img/0.gif';
+					document.getElementById('img_'+item).src='<?php echo $iconPath; ?>0.gif';
 				}
 			}
 
@@ -194,7 +196,7 @@ class CourseSelectForm
 					case RESOURCE_SCORM:
 						break;
                     default :
-						echo '<img id="img_'.$type.'" src="../img/1.gif" onclick="javascript:exp('."'$type'".');" />&nbsp;';
+						echo '<img id="img_'.$type.'" src="'.$iconPath.'1.gif" onclick="javascript:exp('."'$type'".');" />&nbsp;';
 						echo '<b onclick="javascript:exp('."'$type'".');" >'.$resource_titles[$type].'</b><br />';
 						echo '<div id="div_'.$type.'">';
 						if ($type == RESOURCE_LEARNPATH) {
@@ -233,7 +235,7 @@ class CourseSelectForm
         if (!empty($forum_categories)) {
             $type = RESOURCE_FORUMCATEGORY;
 
-            echo '<img id="img_'.$type.'" src="../img/1.gif" onclick="javascript:exp('."'$type'".');" />&nbsp;';
+            echo '<img id="img_'.$type.'" src="'.$iconPath.'1.gif" onclick="javascript:exp('."'$type'".');" />&nbsp;';
             echo '<b onclick="javascript:exp('."'$type'".');" >'.$resource_titles[RESOURCE_FORUM].'</b><br />';
             echo '<div id="div_'.$type.'">';
 
@@ -480,7 +482,7 @@ class CourseSelectForm
 						$documents = isset($_POST['resource'][RESOURCE_DOCUMENT]) ? $_POST['resource'][RESOURCE_DOCUMENT] : null;
 						if (!empty($resources) && is_array($resources))
 							foreach($resources as $id => $obj) {
-								if ($obj->file_type == 'folder' && ! isset($_POST['resource'][RESOURCE_DOCUMENT][$id]) && is_array($documents)) {
+								if (isset($obj->file_type) && $obj->file_type == 'folder' && !isset($_POST['resource'][RESOURCE_DOCUMENT][$id]) && is_array($documents)) {
 									foreach($documents as $id_to_check => $post_value) {
 										$obj_to_check = $resources[$id_to_check];
 										$shared_path_part = substr($obj_to_check->path,0,strlen($obj->path));
@@ -521,7 +523,9 @@ class CourseSelectForm
 	 * @param array $hidden_fiels Hidden fields to add to the form.
 	 * @param boolean the document array will be serialize. This is used in the course_copy.php file
 	 */
-	 function display_form_session_export($list_course, $hidden_fields = null, $avoid_serialize=false) {
+	 function display_form_session_export($list_course, $hidden_fields = null, $avoid_serialize = false)
+     {
+         $iconPath = api_get_path(WEB_IMG_PATH);
 ?>
 		<script>
 			function exp(item) {
@@ -566,7 +570,6 @@ class CourseSelectForm
 
 		//get destination course title
 		if(!empty($hidden_fields['destination_course'])) {
-			require_once(api_get_path(LIBRARY_PATH).'course.lib.php');
 			$course_infos = CourseManager::get_course_information($hidden_fields['destination_course']);
 			echo '<h3>';
 				echo get_lang('DestinationCourse').' : '.$course_infos['title'];
@@ -580,7 +583,7 @@ class CourseSelectForm
 		foreach ($list_course as $course){
 			foreach ($course->resources as $type => $resources) {
 				if (count($resources) > 0) {
-					echo '<img id="img_'.$course->code.'" src="../img/1.gif" onclick="javascript:exp('."'$course->code'".');" />';
+					echo '<img id="img_'.$course->code.'" src="'.$iconPath.'1.gif" onclick="javascript:exp('."'$course->code'".');" />';
 					echo '<b  onclick="javascript:exp('."'$course->code'".');" > '.$course->code.'</b><br />';
 					echo '<div id="div_'.$course->code.'">';
 					echo '<blockquote>';

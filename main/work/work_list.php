@@ -79,37 +79,13 @@ if (!empty($my_folder_data['description'])) {
     echo '<p><div><strong>'.get_lang('Description').':</strong><p>'.Security::remove_XSS($my_folder_data['description']).'</p></div></p>';
 }
 
-$action = isset($_REQUEST['action']) ? $_REQUEST['action'] : null;
-$item_id = isset($_REQUEST['item_id']) ? intval($_REQUEST['item_id']) : null;
+echo getAllDocumentsFromWorkToString($workId, $courseInfo);
 
-switch ($action) {
-    case 'delete':
-        $file_deleted = deleteWorkItem($item_id, $courseInfo);
-
-        if (!$file_deleted) {
-            Display::display_error_message(get_lang('YouAreNotAllowedToDeleteThisDocument'));
-        } else {
-            Display::display_confirmation_message(get_lang('TheDocumentHasBeenDeleted'));
-        }
-        break;
-}
-
-$result = getWorkDateValidationStatus($work_data);
-echo $result['message'];
 $check_qualification = intval($my_folder_data['qualification']);
 
 if (!empty($work_data['enable_qualification']) && !empty($check_qualification)) {
     $type = 'simple';
-
-    $columns = array(
-        get_lang('Type'),
-        get_lang('Title'),
-        get_lang('Qualification'),
-        get_lang('Date'),
-        get_lang('Status'),
-        get_lang('Actions')
-    );
-
+    $columns        = array(get_lang('Type'), get_lang('FirstName'), get_lang('LastName'), get_lang('Title'), get_lang('Qualification'), get_lang('Date'), get_lang('Status'), get_lang('Actions'));
     $column_model   = array (
         array('name'=>'type', 'index'=>'file', 'width'=>'5',   'align'=>'left', 'search' => 'false', 'sortable' => 'false'),
         array('name'=>'title', 'index'=>'title', 'width'=>'40',   'align'=>'left', 'search' => 'false', 'wrap_cell' => 'true'),
@@ -120,14 +96,7 @@ if (!empty($work_data['enable_qualification']) && !empty($check_qualification)) 
     );
 } else {
     $type = 'complex';
-
-    $columns  = array(
-        get_lang('Type'),
-        get_lang('Title'),
-        get_lang('Date'),
-        get_lang('Actions')
-    );
-
+    $columns  = array(get_lang('Type'), get_lang('FirstName'), get_lang('LastName'), get_lang('Title'), get_lang('Date'),  get_lang('Actions'));
     $column_model   = array (
         array('name'=>'type',           'index'=>'file',            'width'=>'5',   'align'=>'left', 'search' => 'false', 'sortable' => 'false'),
         array('name'=>'title',          'index'=>'title',           'width'=>'60',   'align'=>'left', 'search' => 'false', 'wrap_cell' => "true"),

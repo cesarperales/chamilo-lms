@@ -33,7 +33,7 @@ require_once api_get_path(LIBRARY_PATH).'link.lib.php';
 $this_section = SECTION_COURSES;
 api_protect_course_script();
 
-$htmlHeadXtra[] = '<script type="text/javascript">
+$htmlHeadXtra[] = '<script>
     $(document).ready( function() {
     	for (i=0;i<$(".actions").length;i++) {
     		if ($(".actions:eq("+i+")").html()=="<table border=\"0\"></table>" || $(".actions:eq("+i+")").html()=="" || $(".actions:eq("+i+")").html()==null) {
@@ -78,15 +78,15 @@ $session_id = api_get_session_id();
 $condition_session = api_get_session_condition($session_id, true, true);
 
 if (isset($_GET['action']) && $_GET['action'] == 'addlink') {
-	$nameTools = '';
-	$interbreadcrumb[] = array('url' => 'link.php', 'name' => get_lang('Links'));
-	$interbreadcrumb[] = array('url' => '#', 'name' => get_lang('AddLink'));
+    $nameTools = '';
+    $interbreadcrumb[] = array('url' => 'link.php', 'name' => get_lang('Links'));
+    $interbreadcrumb[] = array('url' => '#', 'name' => get_lang('AddLink'));
 }
 
 if (isset($_GET['action']) && $_GET['action'] == 'addcategory') {
-	$nameTools = '';
-	$interbreadcrumb[] = array('url' => 'link.php', 'name' => get_lang('Links'));
-	$interbreadcrumb[] = array('url' => '#', 'name' => get_lang('AddCategory'));
+    $nameTools = '';
+    $interbreadcrumb[] = array('url' => 'link.php', 'name' => get_lang('Links'));
+    $interbreadcrumb[] = array('url' => '#', 'name' => get_lang('AddCategory'));
 }
 
 if (isset($_GET['action']) && $_GET['action'] == 'editlink') {
@@ -122,48 +122,48 @@ function MM_popupMsg(msg) { //v1.0
 $nameTools = get_lang('Links');
 
 if (isset($_GET['action'])) {
-	$check_token = Security::check_token('request');
+	$check_token = true;
 	if ($check_token) {
-		switch ($_GET['action']) {
-			case 'addlink':
-				if ($link_submitted) {
-					if (!addlinkcategory("link")) {	// Here we add a link
-						unset($submit_link);
-					}
-				}
-				break;
-			case 'addcategory':
-				if ($category_submitted) {
-					if (!addlinkcategory('category')) {	// Here we add a category
-						unset($submit_category);
-					}
-				}
-				break;
-			case 'importcsv':
-				if ($_POST['submitImport']) {
-					import_csvfile();
-				}
-				break;
-			case 'deletelink':
-				deletelinkcategory('link'); // Here we delete a link
-				break;
-			case 'deletecategory':
-				deletelinkcategory('category'); // Here we delete a category
-				break;
-			case 'editlink':
-				editlinkcategory('link'); // Here we edit a link
-				break;
-			case 'editcategory':
-				editlinkcategory('category'); // Here we edit a category
-				break;
-			case 'visible':
-				change_visibility($_GET['id'], $_GET['scope']); // Here we edit a category
-				break;
-			case 'invisible':
-				change_visibility($_GET['id'], $_GET['scope']); // Here we edit a category
-				break;
-		}
-		Security::clear_token();
+        switch ($_GET['action']) {
+            case 'addlink':
+                if ($link_submitted) {
+                    if (!addlinkcategory("link")) {	// Here we add a link
+                        unset($submit_link);
+                    }
+                }
+                break;
+            case 'addcategory':
+                if ($category_submitted) {
+                    if (!addlinkcategory('category')) {	// Here we add a category
+                        unset($submit_category);
+                    }
+                }
+                break;
+            case 'importcsv':
+                if ($_POST['submitImport']) {
+                    import_csvfile();
+                }
+                break;
+            case 'deletelink':
+                deletelinkcategory($id, 'link'); // Here we delete a link
+                break;
+            case 'deletecategory':
+                deletelinkcategory($id, 'category'); // Here we delete a category
+                break;
+            case 'editlink':
+                editlinkcategory('link'); // Here we edit a link
+                break;
+            case 'editcategory':
+                editlinkcategory('category'); // Here we edit a category
+                break;
+            case 'visible':
+                change_visibility($_GET['id'], $_GET['scope']); // Here we edit a category
+                break;
+            case 'invisible':
+                change_visibility($_GET['id'], $_GET['scope']); // Here we edit a category
+                break;
+        }
+        Security::clear_token();
 	}
 }
 $token = Security::get_token();
@@ -221,7 +221,7 @@ if (api_is_allowed_to_edit(null, true) && isset($_GET['action'])) {
 		} else {
             $target_link = "_blank";
         }
-        
+
 		echo '	<div class="control-group url">
 					<label class="control-label">
 						<span class="form_required">*</span> URL
@@ -290,7 +290,13 @@ if (api_is_allowed_to_edit(null, true) && isset($_GET['action'])) {
 					</label>
 					<div class="controls">
 						<select  name="target_link" id="target_link">';
-        $targets = array('_self'=>get_lang('LinkOpenSelf'),'_blank'=>get_lang('LinkOpenBlank'),'_parent'=>get_lang('LinkOpenParent'),'_top'=>get_lang('LinkOpenTop'));
+        $targets = array(
+            '_self' => get_lang('LinkOpenSelf'),
+            '_blank' => get_lang('LinkOpenBlank'),
+            '_parent' => get_lang('LinkOpenParent'),
+            '_top' => get_lang('LinkOpenTop'),
+            '_in_header' => get_lang('LinkOpenInMainPlatformSection')
+        );
 		foreach ($targets as $target_id => $target) {
 			$selected = '';
 			if ($target_id == $target_link) {
@@ -469,7 +475,7 @@ if (empty($_GET['action']) || ($_GET['action'] != 'editlink' && $_GET['action'] 
 		}
 		// If the $urlview has a 1 for this categorie, this means it is expanded and should be desplayed as a
 		// - instead of a +, the category is no longer clickable and all the links of this category are displayed
-		$myrow['description'] = text_filter($myrow['description']);
+		$myrow['description'] = $myrow['description'];
 
 		if (isset($urlview[$i]) && $urlview[$i] == '1') {
 			$newurlview = $urlview;
@@ -480,7 +486,7 @@ if (empty($_GET['action']) || ($_GET['action'] != 'editlink' && $_GET['action'] 
 				echo '<tr>';
 					echo '<th width="81%" style="font-weight: bold; text-align:left;padding-left: 5px;">';
 					echo '<a href="'.api_get_self().'?'.api_get_cidreq().'&amp;urlview='.Security::remove_XSS($newurlview).'">';
-					echo '<img src="../img/icons/22/view_remove.png" />&nbsp;&nbsp;'.Security::remove_XSS($myrow['category_title']).'</a><br />&nbsp;&nbsp;&nbsp;'.$myrow['description'];
+					echo Display::return_icon('view_remove.png').'&nbsp;&nbsp;'.Security::remove_XSS($myrow['category_title']).'</a><br />&nbsp;&nbsp;&nbsp;'.$myrow['description'];
 					echo '</th>';
 					if (api_is_allowed_to_edit(null, true)) {
 						if ($session_id == $myrow['session_id']) {
@@ -501,7 +507,7 @@ if (empty($_GET['action']) || ($_GET['action'] != 'editlink' && $_GET['action'] 
 				echo '<tr>';
 					echo '<th width="81%" style="font-weight: bold; text-align:left;padding-left: 5px;"><a href="'.api_get_self().'?'.api_get_cidreq().'&amp;urlview=';
 					echo is_array($view) ? implode('', $view) : $view;
-					echo '"><img src="../img/icons/22/view_tree.png" />&nbsp;&nbsp;'.Security::remove_XSS($myrow['category_title']).$session_img;
+					echo '">'.Display::return_icon('view_tree.png').' &nbsp;&nbsp;'.Security::remove_XSS($myrow['category_title']).$session_img;
 					echo'</a><br />&nbsp;&nbsp;&nbsp;';
 					echo $myrow['description'];
 					if (api_is_allowed_to_edit(null, true)) {

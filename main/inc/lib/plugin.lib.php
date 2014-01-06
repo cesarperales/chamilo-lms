@@ -4,8 +4,6 @@
 class AppPlugin
 {
     public $plugin_regions = array(
-        'main_top',
-        'main_bottom',
         'login_top',
         'login_bottom',
         'menu_top',
@@ -94,7 +92,7 @@ class AppPlugin
         $pluginpath = api_get_path(SYS_PLUGIN_PATH).$plugin_name.'/install.php';
 
         if (is_file($pluginpath) && is_readable($pluginpath)) {
-            //execute the install procedure
+            // Executes the install procedure
             require $pluginpath;
         }
     }
@@ -156,13 +154,13 @@ class AppPlugin
         return $this->plugin_regions;
     }
 
-    function load_region($region, $main_template, $forced = false)
+    function load_region($plugins, $region, $main_template, $forced = false)
     {
         if ($region == 'course_tool_plugin') {
             return null;
         }
         ob_start();
-        $this->get_all_plugin_contents_by_region($region, $main_template, $forced);
+        $this->get_all_plugin_contents_by_region($plugins, $region, $main_template, $forced);
         $content = ob_get_contents();
         ob_end_clean();
         return $content;
@@ -179,7 +177,7 @@ class AppPlugin
         global $language_interface;
         $root = api_get_path(SYS_PLUGIN_PATH);
 
-        // 1. Loading english if exists
+        //1. Loading english if exists
         $english_path = $root.$plugin_name."/lang/english.php";
 
         if (is_readable($english_path)) {
@@ -211,9 +209,8 @@ class AppPlugin
      * @param obj   template obj
      * @todo improve this function
      */
-    function get_all_plugin_contents_by_region($region, $template, $forced = false)
+    function get_all_plugin_contents_by_region($_plugins, $region, $template, $forced = false)
     {
-        global $_plugins;
         if (isset($_plugins[$region]) && is_array($_plugins[$region])) {
         //if (1) {
             //Load the plugin information
@@ -409,6 +406,7 @@ class AppPlugin
     function set_course_settings_defaults(& $values)
     {
         $plugin_list = $this->get_installed_plugins();
+
         foreach ($plugin_list as $plugin_name) {
             $plugin_info = $this->get_plugin_info($plugin_name);
             if (isset($plugin_info['plugin_class'])) {
@@ -462,10 +460,11 @@ class AppPlugin
      * @param string The plugin ID
      * @return array Nice array of keys for course settings
      */
-    public function get_plugin_course_settings($plugin_name)
-    {
+    public function get_plugin_course_settings($plugin_name) {
         $settings = array();
-        if (empty($plugin_name)) { return $settings; }
+        if (empty($plugin_name)) {
+            return $settings;
+        }
         $plugin_info = $this->get_plugin_info($plugin_name);
 
         if (isset($plugin_info['plugin_class'])) {
@@ -481,7 +480,8 @@ class AppPlugin
                     }
                 }
             }
-            unset($obj); unset($plugin_info);
+            unset($obj);
+            unset($plugin_info);
         }
         return $settings;
     }

@@ -1,143 +1,138 @@
-{% extends "default/layout/main.tpl" %}
+{% extends app.template_style ~ "/layout/main.tpl" %}
 
 {% block body %}
 	{# Main content #}
 
-    {# Plugin main top #}
-    {% if plugin_main_top %}
-        <div id="plugin_main_top" class="span12">
-            {{ plugin_main_top }}
-        </div>
-    {% endif %}
+	{#  Left column  #}
+	<div class="col-md-3 menu-column">
+        {% block left_column %}
 
-	{#  Right column #}
-	<div class="span3 menu-column">
-        {% if plugin_menu_top %}
-            <div id="plugin_menu_top">
-                {{plugin_menu_top}}
-            </div>
-        {% endif %}
+            {% if plugin_menu_top %}
+                <div id="plugin_menu_top">
+                    {{plugin_menu_top}}
+                </div>
+            {% endif %}
 
-	    {# if user is not login show the login form #}
-		{% if _u.logged  == 0 %}
-			{% include "default/layout/login_form.tpl" %}
-		{% endif %}
+            {# if user is not login show the login form #}
+            {% if _u.logged  == 0 %}
+                {% include app.template_style ~ "/layout/login_form.tpl" %}
+            {% endif %}
 
-		{# User picture #}
-        {{ user_image_block }}
+            {#  course_session_block #}
+            {% include app.template_style ~ "/index/course_session_block.tpl" %}
 
-        {# User Profile links #}
-		{{ profile_block }}
+            {#  User picture  #}
+            {% include app.template_style ~ "/index/user_image_block.tpl" %}
 
-        {# Course block - admin #}
-		{{ course_block }}
+            {#  User Profile links #}
+            {% include app.template_style ~ "/index/profile_block.tpl" %}
 
-        {# Course block - teacher #}
-		{{ teacher_block }}
+            {#  Social links #}
+            {% include app.template_style ~ "/index/profile_social_block.tpl" %}
 
-		{# Notice #}
-		{{ notice_block }}
+            {#  Course block - admin #}
+            {% include app.template_style ~ "/index/course_block.tpl" %}
 
-        {# Help #}
-		{{ help_block }}
+            {#  Course block - teacher #}
+            {% include app.template_style ~ "/index/teacher_block.tpl" %}
 
-		{# Links that are not added in the tabs #}
-		{{ navigation_course_links }}
+            {#  Session block #}
+            {% include app.template_style ~ "/index/session_block.tpl" %}
 
-		{# Reservation block  #}
-		{{ reservation_block }}
+            {#  Notice  #}
+            {% include app.template_style ~ "/index/notice_block.tpl" %}
 
-		{# Search (xapian) #}
-		{{ search_block }}
+            {#  Help #}
+            {% include app.template_style ~ "/index/help_block.tpl" %}
 
-		{# Classes #}
-		{{ classes_block }}
+            {#  Links that are not added in the tabs #}
+            {% include app.template_style ~ "/index/navigation_block.tpl" %}
 
-		{# Skills #}
-		{{ skills_block }}
+            {#  Reservation block  #}
+            {{ reservation_block }}
 
-		{# Plugin courses sidebar #}
-        {# Plugins for footer section #}
+            {#  Search (xapian) #}
+            {{ search_block }}
 
-        {% if plugin_menu_bottom %}
-            <div id="plugin_menu_bottom">
-                {{ plugin_menu_bottom }}
-            </div>
-        {% endif %}
+            {#  Classes  #}
+            {{ classes_block }}
+
+            {#  Skills #}
+            {% include app.template_style ~ "/index/skills_block.tpl" %}
+
+            {#  Plugin courses sidebar  #}
+            {#  Plugins for footer section  #}
+
+            {% if plugin_menu_bottom %}
+                <div id="plugin_menu_bottom">
+                    {{ plugin_menu_bottom }}
+                </div>
+            {% endif %}
+        {% endblock %}
 	</div>
+	<div class="col-md-9 content-column">
+        {% block right_column %}
 
-	<div class="span9 content-column">
-        {# Plugin bottom #}
-        {% if plugin_content_top %}
-            <div id="plugin_content_top">
-                {{ plugin_content_top }}
-            </div>
-        {% endif %}
-
-		{# Portal homepage #}
-        {% if home_page_block %}
-            <section id="homepage">
-                <div class="row">
-                    <div class="span9">
-                    {{ home_page_block }}
-                    </div>
+            {#  Plugin bottom  #}
+            {% if plugin_content_top %}
+                <div id="plugin_content_top">
+                    {{ plugin_content_top }}
                 </div>
-            </section>
-        {% endif %}
+            {% endif %}
 
-		{#  ??  #}
-		{{ sniff_notification }}
-
-        {% include "default/layout/page_body.tpl" %}
-
-        {# Welcome to course block  #}
-        {% if welcome_to_course_block %}
-            <section id="welcome_to_course">
-            {{ welcome_to_course_block }}
-            </section>
-        {% endif %}
-
-        {% if content is not null %}
-            <section id="main_content">
-                {{ content }}
-            </section>
-        {% endif %}
-
-		{# Announcements  #}
-        {% if announcements_block %}
-            <section id="announcements">
-            {{ announcements_block }}
-            </section>
-        {% endif %}
-
-        {# Course categories (must be turned on in the admin settings) #}
-        {% if course_category_block %}
-            <section id="course_category">
-                <div class="row">
-                    <div class="span9">
-                    {{ course_category_block }}
+            {#  Portal homepage  #}
+            {% if home_page_block %}
+                <section id="homepage">
+                    <div class="row">
+                        <div class="col-md-9">
+                        {{ home_page_block }}
+                        </div>
                     </div>
+                </section>
+            {% endif %}
+
+            {#  ??  #}
+            {{ sniff_notification }}
+
+            {% include app.template_style ~ "/layout/page_body.tpl" %}
+
+            {% if content is not null %}
+                <section id="main_content">
+                    {{ content }}
+                </section>
+            {% endif %}
+
+            {% include app.template_style ~ "/layout/page_post_body.tpl" %}
+
+            {#  Announcements  #}
+            {% if announcements_block %}
+                <section id="announcements">
+                {{ announcements_block }}
+                </section>
+            {% endif %}
+
+            {# Course categories (must be turned on in the admin settings) #}
+            {% if course_category_block %}
+                <section id="course_category">
+                    <div class="row">
+                        <div class="col-md-9">
+                        {{ course_category_block }}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+
+            {#  Hot courses template  #}
+            {% include app.template_style ~ "/layout/hot_courses.tpl" %}
+
+            {#  Content bottom  #}
+            {% if plugin_content_bottom %}
+                <div id="plugin_content_bottom">
+                    {{plugin_content_bottom}}
                 </div>
-            </section>
-        {% endif %}
-
-		{# Hot courses template  #}
-		{% include "default/layout/hot_courses.tpl" %}
-
-        {# Content bottom  #}
-        {% if plugin_content_bottom %}
-            <div id="plugin_content_bottom">
-                {{plugin_content_bottom}}
-            </div>
-        {% endif %}
+            {% endif %}
+        {% endblock %}
         &nbsp;
 	</div>
-
-    {# Plugin main bottom #}
-    {% if plugin_main_bottom %}
-        <div id="plugin_main_bottom" class="span12">
-            {{ plugin_main_bottom }}
-        </div>
-    {% endif %}
 
 {% endblock %}

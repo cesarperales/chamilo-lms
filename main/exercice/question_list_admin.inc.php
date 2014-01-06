@@ -45,34 +45,6 @@ $ajax_url = api_get_path(WEB_AJAX_PATH)."exercise.ajax.php?".api_get_cidreq()."&
 
 <script>
 $(function() {
-    $( "#dialog:ui-dialog" ).dialog( "destroy" );
-    $( "#dialog-confirm" ).dialog({
-            autoOpen: false,
-            show: "blind",
-            resizable: false,
-            height:150,
-            modal: false
-     });
-
-    $(".opener").click(function() {
-        var targetUrl = $(this).attr("href");
-        $( "#dialog-confirm" ).dialog({
-        	modal: true,
-            buttons: {
-                "<?php echo get_lang("Yes"); ?>": function() {
-                    location.href = targetUrl;
-                    $( this ).dialog( "close" );
-
-                },
-                "<?php echo get_lang("No"); ?>": function() {
-                    $( this ).dialog( "close" );
-                }
-            }
-        });
-        $( "#dialog-confirm" ).dialog("open");
-        return false;
-    });
-
     var stop = false;
     $( "#question_list h3" ).click(function( event ) {
         if ( stop ) {
@@ -83,10 +55,9 @@ $(function() {
     });
 
     var icons = {
-            header: "ui-icon-circle-arrow-e",
-            headerSelected: "ui-icon-circle-arrow-s"
+        header: "ui-icon-circle-arrow-e",
+        headerSelected: "ui-icon-circle-arrow-s"
     };
-
 
     /* We can add links in the accordion header */
     $("div > div > div > .edition > div > a").click(function() {
@@ -109,7 +80,7 @@ $(function() {
     .sortable({
         cursor: "move", // works?
         update: function(event, ui) {
-            var order = $(this).sortable("serialize") + "&a=update_question_order&exercise_id=<?php echo intval($_GET['exerciseId']);?>";
+            var order = $(this).sortable("serialize") + "&a=update_question_order&exercise_id=<?php echo $exerciseId;?>";
             $.post("<?php echo $ajax_url ?>", order, function(reponse){
                 $("#message").html(reponse);
             });
@@ -125,16 +96,22 @@ $(function() {
 </script>
 <?php
 
-//we filter the type of questions we can add
-Question :: display_type_menu($objExercise);
+// Filters the type of questions we can add.
+Question::display_type_menu($objExercise);
+// Re sets the question list
+$objExercise->setQuestionList();
 echo '<div style="clear:both;"></div>';
 echo '<div id="message"></div>';
 $token = Security::get_token();
-//deletes a session when using don't know question type (ugly fix)
+
+// Deletes a session when using don't know question type (ugly fix).
 unset($_SESSION['less_answer']);
 
-// If we are in a test
+echo Question::getMediaLabels();
+
+// If we are in a test.
 $inATest = isset($exerciseId) && $exerciseId > 0;
+
 if (!$inATest) {
 	echo "<p class='warning-message'>".get_lang("ChoiceQuestionType")."</p>";
 } else {
@@ -149,56 +126,68 @@ if (!$inATest) {
     echo "<div style='clear:both'>&nbsp;</div>";
 
     echo '<div id="question_list">';
-	if ($nbrQuestions) {
-        //Always getting list from DB
-        $questionList = $objExercise->selectQuestionList(true);
 
-        // Style for columns
+    if ($nbrQuestions) {
+        // Always getting list from DB.
+
+        $objExercise->setCategoriesGrouping(false);
+        $questionList = $objExercise->getQuestionListWithMediasUncompressed();
+
+        // Style for columns.
         $styleQuestion = "width:50%; float:left;";
         $styleType = "width:4%; float:left; padding-top:4px; text-align:center;";
         $styleCat = "width:22%; float:left; padding-top:8px; text-align:center;";
         $styleLevel = "width:6%; float:left; padding-top:8px; text-align:center;";
         $styleScore = "width:4%; float:left; padding-top:8px; text-align:center;";
 
+        $category_list = Testcategory::getListOfCategoriesNameForTest($objExercise->id, false);
+
         if (is_array($questionList)) {
-			foreach ($questionList as $id) {
-				//To avoid warning messages
+            foreach ($questionList as $id) {
+				// To avoid warning messages.
 				if (!is_numeric($id)) {
 					continue;
 				}
-				$objQuestionTmp = Question::read($id);
+                /** @var Question $objQuestionTmp */
+				$objQuestionTmp = Question :: read($id);
 				$question_class = get_class($objQuestionTmp);
 
 				$clone_link = '<a href="'.api_get_self().'?'.api_get_cidreq().'&clone_question='.$id.'">'.Display::return_icon('cd.gif',get_lang('Copy'), array(), ICON_SIZE_SMALL).'</a>';
 				$edit_link  = '<a href="'.api_get_self().'?'.api_get_cidreq().'&type='.$objQuestionTmp->selectType().'&myid=1&editQuestion='.$id.'">'.Display::return_icon('edit.png',get_lang('Modify'), array(), ICON_SIZE_SMALL).'</a>';
-
 				if ($objExercise->edit_exercise_in_lp == true) {
 				     $delete_link = '<a id="delete_'.$id.'" class="opener"  href="'.api_get_self().'?'.api_get_cidreq().'&exerciseId='.$exerciseId.'&deleteQuestion='.$id.'" >'.Display::return_icon('delete.png',get_lang('RemoveFromTest'), array(), ICON_SIZE_SMALL).'</a>';
 				}
-
 				$edit_link   = Display::tag('div', $edit_link,   array('style'=>'float:left; padding:0px; margin:0px'));
 				$clone_link  = Display::tag('div', $clone_link,  array('style'=>'float:left; padding:0px; margin:0px'));
 				$delete_link = Display::tag('div', $delete_link, array('style'=>'float:left; padding:0px; margin:0px'));
-				$actions     = Display::tag('div', $edit_link.$clone_link.$delete_link, array('class'=>'edition','style'=>'width:100px; right:10px; margin-top: 0px; position: absolute; top: 10%;'));
+				$actions     = Display::tag('div', $edit_link.$clone_link.$delete_link, array('class'=>'edition','style'=>'width:100px; right:10px;     margin-top: 0px;     position: absolute;     top: 10%;'));
 
                 $title = Security::remove_XSS($objQuestionTmp->selectTitle());
                 $move = Display::return_icon('all_directions.png',get_lang('Move'), array('class'=>'moved', 'style'=>'margin-bottom:-0.5em;'));
 
                 // Question name
-                $questionName = Display::tag('div', '<a href="#" title = "'.htmlentities($title).'">'.$move.' '.cut($title, 42).'</a>', array('style'=>$styleQuestion));
+				$questionName = Display::tag('div', '<a href="#" title = "'.$title.'">'.$move.' '.Text::cut($title, 42).'</a>', array('style'=>$styleQuestion));
 
-				// Question type
+				// Question type.
 				list($typeImg, $typeExpl) = $objQuestionTmp->get_type_icon_html();
-				$questionType = Display::tag('div', Display::return_icon($typeImg, $typeExpl, array(), ICON_SIZE_MEDIUM), array('style'=>$styleType));
 
-				// Question category
-				$txtQuestionCat = Security::remove_XSS(Testcategory::getCategoryNameForQuestion($objQuestionTmp->id));
-				if (empty($txtQuestionCat)) {
-					$txtQuestionCat = "-";
+                $question_media = null;
+                if (!empty($objQuestionTmp->parent_id)) {
+                    $objQuestionMedia = Question::read($objQuestionTmp->parent_id);
+                    $question_media  = ' '.Question::getMediaLabel($objQuestionMedia->question);
+                }
+
+				$questionType = Display::tag('div', Display::return_icon($typeImg, $typeExpl, array(), ICON_SIZE_MEDIUM), array('style' => $styleType));
+
+				// Question category.
+                $category_labels = Testcategory::return_category_labels($objQuestionTmp->category_list, $category_list);
+
+				if (empty($category_labels)) {
+					$category_labels = "";
 				}
-				$questionCategory = Display::tag('div', '<a href="#" style="padding:0px; margin:0px;" title="'.$txtQuestionCat.'">'.cut($txtQuestionCat, 42).'</a>', array('style'=>$styleCat));
+				$questionCategory = Display::tag('div', '<a href="#" style="padding:0px; margin:0px;">'.$category_labels.$question_media.'</a>', array('style'=>$styleCat));
 
-				// Question level
+				// Question level.
 				$txtQuestionLevel = $objQuestionTmp->level;
                 if (empty($objQuestionTmp->level)) {
                     $txtQuestionLevel = '-';
@@ -224,7 +213,7 @@ if (!$inATest) {
                         echo '<br />';
                         //echo get_lang('Level').': '.$objQuestionTmp->selectLevel();
                         echo '<br />';
-                        showQuestion($id, false, null, null, false, true, false, true, $objExercise->feedback_type, true);
+                        echo $objExercise->showQuestion($objQuestionTmp, false, null, null, false, true, false, true, $objExercise->feedback_type, true);
                         echo '</p>';
                     echo '</div>';
                 echo '</div>';

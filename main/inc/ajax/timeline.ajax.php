@@ -1,7 +1,7 @@
 <?php
 /* For licensing terms, see /license.txt */
+
 require_once '../global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'timeline.lib.php';
 
 $timeline = new Timeline();
 
@@ -17,3 +17,4 @@ switch ($action) {
         var_dump($items);*/
     break;
 }
+exit;

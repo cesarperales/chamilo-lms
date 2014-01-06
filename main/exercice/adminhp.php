@@ -16,7 +16,6 @@ require_once 'answer.class.php';
 $language_file='exercice';
 
 require_once '../inc/global.inc.php';
-require_once 'exercise.lib.php';
 
 $this_section=SECTION_COURSES;
 
@@ -26,14 +25,13 @@ if (isset($_REQUEST["cancel"])) {
     }
 }
 
-//$is_courseAdmin = $_SESSION['is_courseAdmin'];
 $newName = (!empty($_REQUEST['newName'])?$_REQUEST['newName']:'');
 $hotpotatoesName = (!empty($_REQUEST['hotpotatoesName'])?$_REQUEST['hotpotatoesName']:'');
 
-$is_allowedToEdit=api_is_allowed_to_edit(null,true);
+$is_allowedToEdit = api_is_allowed_to_edit(null,true);
 
 // document path
-$documentPath=api_get_path(SYS_COURSE_PATH).$_course['path'].'/document';
+$documentPath = api_get_path(SYS_COURSE_PATH).$_course['path'].'/document';
 
 // picture path
 $picturePath=$documentPath.'/images';
@@ -64,8 +62,9 @@ $nameTools = get_lang('adminHP');
 Display::display_header($nameTools,"Exercise");
 
 /** @todo probably wrong !!!! */
-require_once(api_get_path(SYS_CODE_PATH).'/exercice/hotpotatoes.lib.php');
+require_once api_get_path(SYS_CODE_PATH).'exercice/hotpotatoes.lib.php';
 
+$urlMainExercise = api_get_path(WEB_CODE_PATH).'exercice/';
 ?>
 
 <h4>
@@ -77,14 +76,13 @@ if (isset($newName)) {
     if ($newName!="") {
         //alter database record for that test
         SetComment($hotpotatoesName,$newName);
-        echo "<script language='Javascript' type='text/javascript'> window.location='exercice.php'; </script>";
+        echo "<script type='text/javascript'>window.location='".$urlMainExercise."exercice.php'; </script>";
     }
 }
 
-echo "<form action=\"".api_get_self()."\" method='post' name='form1'>";
+echo "<form action=\"".$urlMainExercise."adminhp.php\" method='post' name='form1'>";
 echo "<input type=\"hidden\" name=\"hotpotatoesName\" value=\"$hotpotatoesName\">";
 echo "<input type=\"text\" name=\"newName\" value=\"";
-
 
 $lstrComment = "";
 $lstrComment = GetComment($hotpotatoesName);

@@ -12,7 +12,6 @@ $cidReset = true;
 
 // including some necessary files
 require_once '../inc/global.inc.php';
-require_once '../inc/lib/xajax/xajax.inc.php';
 
 // setting the section (for the tabs)
 $this_section = SECTION_PLATFORM_ADMIN;
@@ -21,8 +20,8 @@ $this_section = SECTION_PLATFORM_ADMIN;
 api_protect_admin_script(true);
 
 // setting breadcrumbs
-$interbreadcrumb[]=array('url' => 'index.php','name' => get_lang('PlatformAdmin'));
-$interbreadcrumb[]=array('url' => 'usergroups.php','name' => get_lang('Classes'));
+$interbreadcrumb[] = array('url' => 'index.php','name' => get_lang('PlatformAdmin'));
+$interbreadcrumb[] = array('url' => 'usergroups.php','name' => get_lang('Classes'));
 
 // Database Table Definitions
 
@@ -103,7 +102,7 @@ $usergroup = new UserGroup();
 $id = intval($_GET['id']);
 $first_letter_user = '';
 
-if ($_POST['form_sent']) {
+if (isset($_POST['form_sent']) && $_POST['form_sent']) {
     $form_sent              = $_POST['form_sent'];
     $elements_posted        = $_POST['elements_in_name'];
     $first_letter_user      = $_POST['firstLetterUser'];
@@ -150,7 +149,7 @@ if ($use_extra_fields) {
 }
 $data       = $usergroup->get($id);
 $list_in    = $usergroup->get_users_by_usergroup($id);
-$list_all    = $usergroup->get_users_by_usergroup();
+$list_all   = $usergroup->get_users_by_usergroup();
 
 $order = array('lastname');
 if (api_is_western_name_order()) {
@@ -211,11 +210,11 @@ if (!empty($user_list)) {
 $add_type == 'unique' ? true : false;
 Display::display_header($tool_name);
 if ($add_type == 'multiple') {
-    $link_add_type_unique = '<a href="'.api_get_self().'?id_session='.$id_session.'&add='.Security::remove_XSS($_GET['add']).'&add_type=unique">'.Display::return_icon('single.gif').get_lang('SessionAddTypeUnique').'</a>';
+    $link_add_type_unique = '<a href="'.api_get_self().'?add_type=unique">'.Display::return_icon('single.gif').get_lang('SessionAddTypeUnique').'</a>';
     $link_add_type_multiple = Display::return_icon('multiple.gif').get_lang('SessionAddTypeMultiple');
 } else {
     $link_add_type_unique = Display::return_icon('single.gif').get_lang('SessionAddTypeUnique');
-    $link_add_type_multiple = '<a href="'.api_get_self().'?id_session='.$id_session.'&add='.Security::remove_XSS($_GET['add']).'&add_type=multiple">'.Display::return_icon('multiple.gif').get_lang('SessionAddTypeMultiple').'</a>';
+    $link_add_type_multiple = '<a href="'.api_get_self().'?add_type=multiple">'.Display::return_icon('multiple.gif').get_lang('SessionAddTypeMultiple').'</a>';
 }
 
 echo '<div class="actions">';
@@ -255,6 +254,7 @@ if ($add_type=='multiple') {
         }
     }
 }
+
 echo Display::input('hidden','id',$id);
 echo Display::input('hidden','form_sent','1');
 echo Display::input('hidden','add_type',null);
@@ -308,43 +308,6 @@ if(!empty($errorMsg)) {
 ?>
 </form>
 <script>
-function moveItem(origin , destination){
-
-    for(var i = 0 ; i<origin.options.length ; i++) {
-        if(origin.options[i].selected) {
-            destination.options[destination.length] = new Option(origin.options[i].text,origin.options[i].value);
-            origin.options[i]=null;
-            i = i-1;
-        }
-    }
-    destination.selectedIndex = -1;
-    sortOptions(destination.options);
-
-}
-
-function sortOptions(options) {
-
-    newOptions = new Array();
-    for (i = 0 ; i<options.length ; i++)
-        newOptions[i] = options[i];
-
-    newOptions = newOptions.sort(mysort);
-    options.length = 0;
-    for(i = 0 ; i < newOptions.length ; i++)
-        options[i] = newOptions[i];
-
-}
-
-function mysort(a, b){
-    if(a.text.toLowerCase() > b.text.toLowerCase()){
-        return 1;
-    }
-    if(a.text.toLowerCase() < b.text.toLowerCase()){
-        return -1;
-    }
-    return 0;
-}
-
 function valide(){
     var options = document.getElementById('elements_in').options;
     for (i = 0 ; i<options.length ; i++)

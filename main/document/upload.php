@@ -41,7 +41,6 @@ $language_file = array('document','gradebook');
 require_once '../inc/global.inc.php';
 
 // Including additional libraries
-require_once api_get_path(LIBRARY_PATH).'document.lib.php';
 require_once api_get_path(LIBRARY_PATH).'specific_fields_manager.lib.php';
 require_once 'document.inc.php';
 
@@ -102,7 +101,7 @@ $(function () {
 // Variables
 
 $is_allowed_to_edit = api_is_allowed_to_edit(null, true);
-
+$_course = api_get_course_info();
 $courseDir = $_course['path'].'/document';
 $sys_course_path = api_get_path(SYS_COURSE_PATH);
 $base_work_dir = $sys_course_path.$courseDir;
@@ -126,18 +125,17 @@ $group_properties = array();
 // This needs cleaning!
 if (api_get_group_id()) {
     // If the group id is set, check if the user has the right to be here
-    // Needed for group related stuff
-    require_once api_get_path(LIBRARY_PATH).'groupmanager.lib.php';
-    // Get group info
-    $group_properties = GroupManager::get_group_properties(api_get_group_id());
 
-    if ($is_allowed_to_edit || GroupManager::is_user_in_group($_user['user_id'], api_get_group_id())) { // Only courseadmin or group members allowed
-        $to_group_id = api_get_group_id();
-        $req_gid = '&amp;gidReq='.api_get_group_id();
-        $interbreadcrumb[] = array('url' => '../group/group_space.php?gidReq='.api_get_group_id(), 'name' => get_lang('GroupSpace'));
-    } else {
-        api_not_allowed(true);
-    }
+	// Get group info
+	$group_properties = GroupManager::get_group_properties(api_get_group_id());
+
+	if ($is_allowed_to_edit || GroupManager::is_user_in_group($_user['user_id'], api_get_group_id())) { // Only courseadmin or group members allowed
+		$to_group_id = api_get_group_id();
+		$req_gid = '&amp;gidReq='.api_get_group_id();
+		$interbreadcrumb[] = array('url' => '../group/group_space.php?gidReq='.api_get_group_id(), 'name' => get_lang('GroupSpace'));
+	} else {
+		api_not_allowed(true);
+	}
 } elseif ($is_allowed_to_edit || is_my_shared_folder(api_get_user_id(), $path, api_get_session_id())) {
 
     // Admin for "regular" upload, no group documents. And check if is my shared folder
@@ -217,14 +215,12 @@ $folders = DocumentManager::get_all_document_folders($_course, $to_group_id, $is
 if (!$is_certificate_mode) {
     echo build_directory_selector($folders, $document_id, (isset($group_properties['directory']) ? $group_properties['directory'] : array()));
 }
-
 $action = api_get_self().'?'.api_get_cidreq().'&id='.$document_id;
-
 $form = new FormValidator('upload', 'POST', $action.'#tabs-2', '', 'enctype="multipart/form-data"');
 $form->addElement('hidden', 'id', $document_id);
 $form->addElement('hidden', 'curdirpath', $path);
 
-$course_quota = format_file_size(DocumentManager::get_course_quota() - DocumentManager::documents_total_space());
+$course_quota = Text::format_file_size(DocumentManager::get_course_quota() - DocumentManager::documents_total_space());
 
 $label = get_lang('MaxFileSize').': '.ini_get('upload_max_filesize').'<br/>'.get_lang('DocumentQuota').': '.$course_quota;
 

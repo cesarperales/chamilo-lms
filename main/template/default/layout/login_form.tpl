@@ -9,11 +9,9 @@
             </div>
         {% endif %}
 
-        {{ login_failed }}
+	{{ login_form }}
 
-        {{ login_form }}
-
-        {{ login_options }}
+	{{ login_options }}
 
         {% if plugin_login_bottom is not null %}
             <div id="plugin_login_bottom">

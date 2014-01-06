@@ -13,6 +13,8 @@
  * Code
  */
 // TODO: Is this file deprecated?
+exit;
+
 
 /* 		INIT SECTION */
 $uInfo = $_REQUEST['uInfo'];
@@ -50,7 +52,7 @@ td {border-bottom: thin dashed gray;}
 $TABLECOURSUSER = Database::get_main_table(TABLE_MAIN_COURSE_USER);
 $TABLECOURSE_GROUPSUSER = Database::get_course_table(TABLE_GROUP_USER);
 $TABLEUSER = Database::get_main_table(TABLE_MAIN_USER);
-$TABLETRACK_ACCESS = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_ACCESS);
+$TABLETRACK_ACCESS = Database::get_main_table(TABLE_STATISTIC_TRACK_E_ACCESS);
 Display::display_header($nameTools, "Tracking");
 include(api_get_path(LIBRARY_PATH) . "statsUtils.lib.inc.php");
 
@@ -65,7 +67,7 @@ $MonthsLong = api_get_months_long();
 $MonthsShort = api_get_months_short();
 
 $is_allowedToTrack = $is_groupTutor; // allowed to track only user of one group
-$is_allowedToTrackEverybodyInCourse = $is_courseAdmin; // allowed to track all student in course
+$is_allowedToTrackEverybodyInCourse = api_is_course_admin(); // allowed to track all student in course
 ?>
 <h3>
     <?php echo $nameTools ?>
@@ -104,7 +106,7 @@ $is_allowedToTrackEverybodyInCourse = $is_courseAdmin; // allowed to track all s
             /*             * ***** MENU ******* */
             echo "<tr>
                 <td>
-                [<a href='userLog.php?uInfo=$uInfo&view=$view'>" . get_lang('Back') . "</a>]
+
         ";
             echo "  &nbsp;&nbsp;&nbsp;||&nbsp;&nbsp;&nbsp;
                 [<a href='" . api_get_self() . "?uInfo=$uInfo&view=$view&period=week&reqdate=$reqdate' class='specialLink'>" . get_lang('PeriodWeek') . "</a>]
@@ -138,8 +140,6 @@ $is_allowedToTrackEverybodyInCourse = $is_courseAdmin; // allowed to track all s
                 </td>
             </tr>
         ";
-            /*             * ***** END OF MENU ******* */
-
             switch ($period) {
                 case "month" :
                     $sql = "SELECT access_date

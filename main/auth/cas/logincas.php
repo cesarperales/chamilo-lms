@@ -12,7 +12,6 @@
 //----------------------------------------------------------------------
 // Load required
 require('../../inc/global.inc.php');
-require_once (api_get_path(LIBRARY_PATH).'events.lib.inc.php');
 require_once('authcas.php');
 use \ChamiloSession as Session;
 global $cas_auth_ver, $cas_auth_server, $cas_auth_port, $cas_auth_uri;
@@ -22,9 +21,9 @@ global $cas_auth_ver, $cas_auth_server, $cas_auth_port, $cas_auth_uri;
 If we are not logged and in our browser enter an URL with a name of a course
 e.g. http://www.chamilo.fr/chamilo/courses/COURSTESTOSETE/?id_session=0
 we go to page api_not_allowed :
-> Vous n'etes pas autorise e acceder e cette page.
-> Soit votre connexion a expire, soit vous essayez d'acceder e une page pour laquelle vous ne disposez pas des permissions suffisantes.
-> Veuillez vous identifier e nouveau depuis la page d'accueil
+> Vous n'�tes pas autoris� � acc�der � cette page.
+> Soit votre connexion a expir�, soit vous essayez d'acc�der � une page pour laquelle vous ne disposez pas des permissions suffisantes.
+> Veuillez vous identifier � nouveau depuis la page d'accueil
 If we click on the link to go to homepage, some datas are entered in $_SESSION and if we enter our CAS loggin, we go to api_not_allowad_page again
 and again
 As a result, if we are not logged on, we have to destroy the session variables, before calling CAS page

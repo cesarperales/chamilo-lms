@@ -12,11 +12,8 @@ require_once '../inc/global.inc.php';
 
 api_protect_admin_script();
 
-require_once api_get_path(CONFIGURATION_PATH).'profile.conf.php';
-require_once api_get_path(INCLUDE_PATH).'lib/mail.lib.inc.php';
-
 // Load terms & conditions from the current lang
-if (get_setting('allow_terms_conditions') == 'true') {
+if (api_get_setting('allow_terms_conditions') == 'true') {
     $get = array_keys($_GET);
     if (isset($get)) {
         if ($get[0] == 'legal') {
@@ -64,7 +61,7 @@ if (!empty($_SESSION['user_language_choice'])) {
 } elseif (!empty($_SESSION['_user']['language'])) {
     $lang = $_SESSION['_user']['language'];
 } else {
-    $lang = get_setting('platformLanguage');
+    $lang = api_get_setting('platformLanguage');
 }
 
 // ----- Ensuring availability of main files in the corresponding language -----
@@ -73,12 +70,9 @@ if (api_is_multiple_url_enabled()) {
     if ($access_url_id != -1) {
         $url_info = api_get_access_url($access_url_id);
         $url = api_remove_trailing_slash(preg_replace('/https?:\/\//i', '', $url_info['url']));
-
-        $clean_url = replace_dangerous_char($url);
+        $clean_url = api_replace_dangerous_char($url);
         $clean_url = str_replace('/', '-', $clean_url);
         $clean_url .= '/';
-
-
         $homep = api_get_path(SYS_PATH).'home/'; //homep for Home Path
         $homep_new = api_get_path(SYS_PATH).'home/'.$clean_url; //homep for Home Path added the url
         $new_url_dir = api_get_path(SYS_PATH).'home/'.$clean_url;
@@ -89,7 +83,7 @@ if (api_is_multiple_url_enabled()) {
     }
 } else {
     $homep_new = '';
-    $homep = api_get_path(SYS_PATH).'home/'; //homep for Home Path
+    $homep = api_get_path(SYS_DATA_PATH).'home/'; //homep for Home Path
 }
 
 $topf 	 = 'register_top'; //topf for Top File
@@ -114,7 +108,7 @@ if (!empty($homep_new)) {
 }
 
 if (!empty($action)) {
-    if ($_POST['formSent']) {
+    if (isset($_POST['formSent']) && $_POST['formSent']) {
         switch ($action) {
             case 'edit_top':
                 // Filter
@@ -170,12 +164,12 @@ echo Display::page_header($tool_name);
 
 // The following security condition has been removed, because it makes no sense here. See Bug #1846.
 //// Forbidden to self-register
-//if (get_setting('allow_registration') == 'false') {
+//if (api_get_setting('allow_registration') == 'false') {
 //    api_not_allowed();
 //}
 
 //api_display_tool_title($tool_name);
-if (get_setting('allow_registration') == 'approval') {
+if (api_get_setting('allow_registration') == 'approval') {
     Display::display_normal_message(get_lang('YourAccountHasToBeApproved'));
 }
 //if openid was not found
@@ -184,7 +178,7 @@ if (!empty($_GET['openid_msg']) && $_GET['openid_msg'] == 'idnotfound') {
 }
 
 $form = new FormValidator('registration');
-if (get_setting('allow_terms_conditions') == 'true') {
+if (api_get_setting('allow_terms_conditions') == 'true') {
     $display_all_form = !isset($_SESSION['update_term_and_condition']['user_id']);
 } else {
     $display_all_form = true;
@@ -240,12 +234,12 @@ if ($display_all_form) {
     }
 
     //	LANGUAGE
-    if (get_setting('registration', 'language') == 'true') {
+    if (api_get_setting('registration', 'language') == 'true') {
         $form->addElement('select_language', 'language', get_lang('Language'), '', array('disabled' => 'disabled'));
     }
 
     //	STUDENT/TEACHER
-    if (get_setting('allow_registration_as_teacher') != 'false') {
+    if (api_get_setting('allow_registration_as_teacher') != 'false') {
         $form->addElement('radio', 'status', get_lang('Status'), get_lang('RegStudent'), STUDENT, array('disabled' => 'disabled'));
         $form->addElement('radio', 'status', null, get_lang('RegAdmin'), COURSEMANAGER, array('disabled' => 'disabled'));
     }
@@ -278,11 +272,12 @@ if ($display_all_form) {
         }
     }
     $extra_data = UserManager::get_extra_user_data(api_get_user_id(), true);
-    UserManager::set_extra_fields_in_form($form, $extra_data, 'registration');
+    $extraField = new ExtraField('user');
+    $extraField->set_extra_fields_in_form($form, $extra_data, 'registration', false, null);
 }
 
 // Terms and conditions
-if (get_setting('allow_terms_conditions') == 'true') {
+if (api_get_setting('allow_terms_conditions') == 'true') {
     $language = api_get_interface_language();
     $language = api_get_language_id($language);
     $term_preview = LegalManager::get_last_condition($language);

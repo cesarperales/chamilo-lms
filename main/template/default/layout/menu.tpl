@@ -1,57 +1,57 @@
 {% if menu is not null %}
+<div class="navbar navbar-default nav-menu">
 
-<div class="navbar subnav">
-    <div class="navbar-inner">
-        <div class="container">
-            <a data-toggle="collapse" data-target=".nav-collapse" class="btn btn-navbar">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </a>
-            <a class="brand" href="{{ _p.web }}">{{ portal_name }}</a>
-            <div class="nav-collapse">
-                <ul class="nav">
-                    {{ menu }}
-                </ul>
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#menu-collapse">
+            <span class="sr-only"> {{ "Toggle navigation" | trans }}</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
+    </div>
 
-                {% if _u.logged == 1 %}
-                <ul class="nav pull-right">
+    <div id="menu-collapse" class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+            {{ menu }}
+        </ul>
 
-                    {% if user_notifications is not null %}
-                    <li>
-                        <a href="{{ message_url }}">{{ user_notifications }}</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                            <img src="{{ _u.avatar_small }}"/>
-                            {{ _u.complete_name }}
-                            <b class="caret"></b>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                {{ profile_link }}
-                                {{ message_link }}
-                            </li>
-                        </ul>
-
-                    <li>
-                        <a id="logout_button" class="logout" title="{{ "Logout"|get_lang }}" href="{{ logout_link }}" >
-                            <img src="{{ "exit.png"|icon(22) }}">
-                        </a>
-                    </li>
-                </ul>
-                {% else %}
-                    {# direct login to course - no visible if logged and on the index page #}
-                    {% if course_code != "" %}
-                        <ul class="nav pull-right">
-                            <li class="dropdown" style="color:white;"><a href='{{ _p.web }}/main/auth/gotocourse.php?firstpage={{ course_code }}'>{{ "LoginEnter"|get_lang }}</a></li>
-                        </ul>
-                    {% endif %}
-                {% endif %}
-            </div>
-        </div>
+        {% if _u.logged == 1 %}
+        <ul class="nav navbar-nav navbar-right">
+            {% if is_profile_editable == true %}
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                        {% if ('allow_message_tool' | get_setting) == 'true' %}
+                            {{ _u.messages_count }}
+                        {% endif %}
+                        <img src="{{ _u.avatar_small }}"/>
+                        {{ _u.complete_name }}
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            {{ profile_link }}
+                            {{ message_link }}
+                        </li>
+                    </ul>
+                </li>
+            {% else %}
+                <li>
+                    <a>
+                        {% if ('allow_message_tool' | get_setting) == 'true' %}
+                            {{ _u.messages_count }}
+                        {% endif %}
+                        <img src="{{ _u.avatar_small }}"/>
+                        {{ _u.complete_name }}
+                    </a>
+                </li>
+            {% endif %}
+            <li>
+                <a id="logout_button" class="logout" title="{{ "Logout"|get_lang }}" href="{{ url('logout') }}" >
+                    <img src="{{ "exit.png"|icon(22) }}">
+                </a>
+            </li>
+        </ul>
+        {% endif %}
     </div>
 </div>
 {% endif %}

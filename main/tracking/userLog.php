@@ -2,6 +2,7 @@
 /* For licensing terms, see /license.txt */
 
 // TODO: Is this file deprecated?
+exit;
 
 /**
  * @package chamilo.tracking
@@ -13,8 +14,9 @@
 
 /* INIT SECTION */
 
-$uInfo = $_REQUEST['uInfo'];
-$view  = $_REQUEST['view'];
+
+$uInfo = isset($_REQUEST['uInfo']) ? $_REQUEST['uInfo'] : null;
+$view  = isset($_REQUEST['view']) ? $_REQUEST['view'] : null;
 
 // name of the language file that needs to be included
 $language_file = 'tracking';
@@ -28,6 +30,7 @@ $this_section = "session_my_space";
 // variables
 $user_id = api_get_user_id();
 $course_id = api_get_course_id();
+$courseId = api_get_course_int_id();
 
 //YW Hack security to quick fix RolesRights bug
 $is_allowed = true;
@@ -40,18 +43,13 @@ require_once api_get_path(SYS_CODE_PATH).'exercice/hotpotatoes.lib.php';
 
 /* Header */
 
-/*
-$interbreadcrumb[]= array ("url"=>"../group/group.php", "name"=> get_lang('BredCrumpGroups'));
-$interbreadcrumb[]= array ("url"=>"../group/group_space.php?gidReq=$_gid", "name"=> get_lang('BredCrumpGroupSpace'));
-*/
-
-if(isset($uInfo)) {
+if ($uInfo) {
     $interbreadcrumb[]= array ('url'=>'../user/userInfo.php?uInfo='.Security::remove_XSS($uInfo), "name"=> api_ucfirst(get_lang('Users')));
 }
 
 $nameTools = get_lang('ToolName');
 
-$htmlHeadXtra[] = "<style type='text/css'>
+$htmlHeadXtra[] = "<style>
 /*<![CDATA[*/
 .secLine {background-color : #E6E6E6;}
 .content {padding-left : 15px;padding-right : 15px; }
@@ -68,29 +66,13 @@ Display::display_header($nameTools,"Tracking");
 
 /*	Constants and variables */
 
-$is_allowedToTrack = $is_courseAdmin;
-$is_course_member = CourseManager::is_user_subscribed_in_real_or_linked_course($user_id, $course_id);
+$is_allowedToTrack = api_is_course_admin();
+$is_course_member = CourseManager::is_user_subscribed_in_real_or_linked_course($user_id, $courseId);
 
 // Database Table Definitions
 $TABLECOURSUSER	        	= Database::get_main_table(TABLE_MAIN_COURSE_USER);
 $TABLEUSER	        		= Database::get_main_table(TABLE_MAIN_USER);
-$tbl_session_course_user 	= Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
-$tbl_session 				= Database::get_main_table(TABLE_MAIN_SESSION);
 $TABLECOURSE_GROUPSUSER 	= Database::get_course_table(TABLE_GROUP_USER);
-
-$sql = "SELECT 1
-        FROM $tbl_session_course_user AS session_course_user
-        INNER JOIN $tbl_session AS session
-            ON session_course_user.id_session = session.id
-            AND ((date_start<=NOW()
-            AND date_end>=NOW())
-            OR (date_start='0000-00-00' AND date_end='0000-00-00'))
-        WHERE id_session='".$_SESSION['id_session']."' AND course_code='$_cid'";
-//echo $sql;
-$result=Database::query($sql);
-if(!Database::num_rows($result)){
-    $disabled = true;
-}
 
 $tbl_learnpath_main = Database::get_course_table(TABLE_LP_MAIN);
 $tbl_learnpath_item = Database::get_course_table(TABLE_LP_ITEM);
@@ -110,6 +92,8 @@ $MonthsShort = api_get_months_short();
 //YW hack security to fix RolesRights bug
 $is_allowedToTrack = true; // allowed to track only user of one group
 $is_allowedToTrackEverybodyInCourse = $is_allowedToTrack; // allowed to track all students in course
+
+$courseId = api_get_course_int_id();
 
 /*	MAIN SECTION */
 ?>
@@ -131,11 +115,11 @@ if( ( $is_allowedToTrack || $is_allowedToTrackEverybodyInCourse )) {
         echo "<h4>".get_lang('ListStudents')."</h4>";
         if( $is_allowedToTrackEverybodyInCourse ) {
             // if user can track everybody : list user of course
-            
+
             $sql = "SELECT count(user_id)
                     FROM $TABLECOURSUSER
                     WHERE course_code = '".Database::escape_string($_cid)."' AND relation_type<>".COURSE_RELATION_TYPE_RRHH."";
-            
+
         } else {
             // if user can only track one group : list users of this group
             $sql = "SELECT count(user)
@@ -220,7 +204,7 @@ if( ( $is_allowedToTrack || $is_allowedToTrackEverybodyInCourse )) {
         if( $is_allowedToTrackEverybodyInCourse ) {
             // check if user is in this course
             $tracking_is_accepted = $is_course_member;
-            $tracked_user_info = Database::get_user_info_from_id($uInfo);
+            $tracked_user_info = api_get_user_info($uInfo);
         } else {
 
             // check if user is in the group of this tutor
@@ -261,19 +245,19 @@ if( ( $is_allowedToTrack || $is_allowedToTrackEverybodyInCourse )) {
                 $view ='0000000';
             }
             //Logins
-            TrackingUserLog::display_login_tracking_info($view, $uInfo, $_cid);
+            TrackingUserLog::display_login_tracking_info($view, $uInfo, $courseId);
 
             //Exercise results
-            TrackingUserLog::display_exercise_tracking_info($view, $uInfo, $_cid);
+            TrackingUserLog::display_exercise_tracking_info($view, $uInfo, $courseId);
 
             //Student publications uploaded
-            TrackingUserLog::display_student_publications_tracking_info($view, $uInfo, $_cid);
+            TrackingUserLog::display_student_publications_tracking_info($view, $uInfo, $courseId);
 
             //Links usage
-            TrackingUserLog::display_links_tracking_info($view, $uInfo, $_cid);
+            TrackingUserLog::display_links_tracking_info($view, $uInfo, $courseId);
 
             //Documents downloaded
-            TrackingUserLog::display_document_tracking_info($view, $uInfo, $_cid);
+            TrackingUserLog::display_document_tracking_info($view, $uInfo, $courseId);
         } else {
             echo get_lang('ErrorUserNotInGroup');
         }

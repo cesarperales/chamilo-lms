@@ -4,7 +4,6 @@
 $language_file = array('registration', 'admin', 'userInfo');
 
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'import.lib.php';
 
 $this_section = SECTION_COURSES;
 
@@ -22,7 +21,7 @@ $tool_name = get_lang('ImportUsersToACourse');
 $interbreadcrumb[] = array ("url" => "user.php", "name" => get_lang("Users"));
 $interbreadcrumb[] = array ("url" => "#", "name" => get_lang("ImportUsersToACourse"));
 
-$form = new FormValidator('user_import', 'post', 'user_import.php');
+$form = new FormValidator('user_import','post','user_import.php');
 $form->addElement('header', $tool_name);
 $form->addElement('file', 'import_file', get_lang('ImportCSVFileLocation'));
 
@@ -35,6 +34,7 @@ $course_code = api_get_course_id();
 if (empty($course_code)) {
     api_not_allowed(true);
 }
+
 
 $session_id = api_get_session_id();
 
@@ -91,7 +91,6 @@ if ($form->validate()) {
                         CourseManager::unsubscribe_user($user_ids, $course_code, $session_id);
                     }
                 }
-
                 foreach ($clean_users as $userId) {
                     $userInfo = api_get_user_info($userId);
                     CourseManager::subscribe_user($userId, $course_code, STUDENT, $session_id);
@@ -138,7 +137,6 @@ if (!empty($message)) {
     } else {
         $empty_line_msg = ($empty_line == 0) ? get_lang('ErrorsWhenImportingFile'): get_lang('ErrorsWhenImportingFile').': '.get_lang('EmptyHeaderLine');
         Display::display_error_message($empty_line_msg);
-
     }
 }
 

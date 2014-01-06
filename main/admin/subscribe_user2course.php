@@ -70,10 +70,10 @@ if (is_array($extra_field_list)) {
 }
 
 /* React on POSTed request */
-if ($_POST['form_sent']) {
+if (!empty($_POST['form_sent'])) {
     $form_sent = $_POST['form_sent'];
-    $users = is_array($_POST['UserList']) ? $_POST['UserList'] : array() ;
-    $courses = is_array($_POST['CourseList']) ? $_POST['CourseList'] : array() ;
+    $users = (isset($_POST['UserList']) && is_array($_POST['UserList']) ? $_POST['UserList'] : array());
+    $courses = (isset($_POST['CourseList']) && is_array($_POST['CourseList']) ? $_POST['CourseList'] : array());
     $first_letter_user = $_POST['firstLetterUser'];
     $first_letter_course = $_POST['firstLetterCourse'];
 
@@ -135,6 +135,7 @@ if (is_array($extra_field_list)) {
     }
 }
 
+$where_filter ='';
 if ($use_extra_fields) {
     $final_result = array();
     if (count($extra_field_result)>1) {
@@ -147,7 +148,6 @@ if ($use_extra_fields) {
         $final_result = $extra_field_result[0];
     }
 
-    $where_filter ='';
     if ($_configuration['multiple_access_urls']) {
         if (is_array($final_result) && count($final_result)>0) {
             $where_filter = " AND u.user_id IN  ('".implode("','",$final_result)."') ";
@@ -190,15 +190,16 @@ unset($result);
 
 $sql = "SELECT code,visual_code,title FROM $tbl_course WHERE visual_code LIKE '".$first_letter_course."%' ORDER BY ". (count($courses) > 0 ? "(code IN('".implode("','", $courses)."')) DESC," : "")." visual_code";
 
-if ($_configuration['multiple_access_urls']) {
-    $tbl_course_rel_access_url= Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
+if (api_is_multiple_url_enabled()) {
+    $tbl_course_rel_access_url = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
     $access_url_id = api_get_current_access_url_id();
     if ($access_url_id != -1){
         $sql = "SELECT code, visual_code, title
                 FROM $tbl_course as course
                   INNER JOIN $tbl_course_rel_access_url course_rel_url
-                ON (course_rel_url.course_code= course.code)
-                  WHERE access_url_id =  $access_url_id  AND (visual_code LIKE '".$first_letter_course."%' ) ORDER BY ". (count($courses) > 0 ? "(code IN('".implode("','", $courses)."')) DESC," : "")." visual_code";
+                ON (course_rel_url.c_id = course.id)
+                  WHERE access_url_id =  $access_url_id  AND (visual_code LIKE '".$first_letter_course."%' )
+              ORDER BY ". (count($courses) > 0 ? "(code IN('".implode("','", $courses)."')) DESC," : "")." visual_code";
     }
 }
 
@@ -206,8 +207,9 @@ $result = Database::query($sql);
 $db_courses = Database::store_result($result);
 unset($result);
 
-if ($_configuration['multiple_access_urls']) {
-    $tbl_course_rel_access_url= Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
+if (api_is_multiple_url_enabled()) {
+    $tbl_course_user = Database::get_main_table(TABLE_MAIN_COURSE_USER);
+    $tbl_course_rel_access_url = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
     $access_url_id = api_get_current_access_url_id();
     if ($access_url_id != -1){
         $sqlNbCours = "	SELECT course_rel_user.course_code, course.title
@@ -215,9 +217,11 @@ if ($_configuration['multiple_access_urls']) {
             INNER JOIN $tbl_course as course
             ON course.code = course_rel_user.course_code
               INNER JOIN $tbl_course_rel_access_url course_rel_url
-            ON (course_rel_url.course_code= course.code)
-              WHERE access_url_id =  $access_url_id  AND course_rel_user.user_id='".$_user['user_id']."' AND course_rel_user.status='1'
-              ORDER BY course.title";
+            ON (course_rel_url.c_id = course.id)
+            WHERE access_url_id =  $access_url_id  AND
+                course_rel_user.user_id='".$_user['user_id']."' AND
+                course_rel_user.status='1'
+            ORDER BY course.title";
     }
 }
 ?>

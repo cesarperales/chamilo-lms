@@ -12,10 +12,6 @@ $cidReset = true;
 
 // including some necessary files
 require_once '../inc/global.inc.php';
-require_once '../inc/lib/xajax/xajax.inc.php';
-require_once api_get_path(LIBRARY_PATH).'promotion.lib.php';
-require_once api_get_path(LIBRARY_PATH).'career.lib.php';
-require_once api_get_path(LIBRARY_PATH).'sessionmanager.lib.php';
 
 $xajax = new xajax();
 $xajax->registerFunction ('search_sessions');
@@ -38,8 +34,7 @@ if (isset($_REQUEST['add_type']) && $_REQUEST['add_type']!=''){
 }
 
 $htmlHeadXtra[] = $xajax->getJavascript('../inc/lib/xajax/');
-$htmlHeadXtra[] = '
-<script>
+$htmlHeadXtra[] = '<script>
 function add_user_to_session (code, content) {
 
     document.getElementById("user_to_add").value = "";
@@ -79,14 +74,14 @@ $errorMsg   = '';
 $users      =$sessions=array();
 $promotion = new Promotion();
 $id = intval($_GET['id']);
-if (isset($_POST['form_sent']) && $_POST['form_sent']) {
-    $form_sent = $_POST['form_sent'];
-    $session_in_promotion_posted = $_POST['session_in_promotion_name'];
+if($_POST['form_sent']) {
+    $form_sent          = $_POST['form_sent'];
+    $session_in_promotion_posted       = $_POST['session_in_promotion_name'];
     if (!is_array($session_in_promotion_posted)) {
         $session_in_promotion_posted=array();
     }
     if ($form_sent == 1) {
-        // Added a parameter to send emails when registering a user
+        //added a parameter to send emails when registering a user
         SessionManager::suscribe_sessions_to_promotion($id, $session_in_promotion_posted);
         header('Location: promotions.php');
         exit;
@@ -98,7 +93,7 @@ $session_list   = SessionManager::get_sessions_list(array(), array('name'));
 $session_not_in_promotion = $session_in_promotion= array();
 
 if (!empty($session_list)) {
-    foreach ($session_list as $session) {
+    foreach($session_list as $session) {
         $promotion_id = $session['promotion_id'];
         if (isset($promotion_id) && !empty($promotion_id)) {
             if ($promotion_id == $id) {
@@ -127,12 +122,39 @@ function search_sessions($needle, $type)
         $needle = Database::escape_string($needle);
         $needle = api_convert_encoding($needle, $charset, 'utf-8');
 
-        $session_list = SessionManager::get_sessions_list(array('s.name LIKE' => "$needle%"));
-        $return .= '<select id="session_not_in_promotion" name="session_not_in_promotion_name[]" multiple="multiple" size="15" style="width:360px;">';
-        foreach ($session_list as $row ) {
-            if (!in_array($row['id'], array_keys($session_in_promotion))) {
-                $return .= '<option value="'.$row['id'].'">'.$row['name'].'</option>';
+        if ($type == 'single') {
+            // search users where username or firstname or lastname begins likes $needle
+          /*  $sql = 'SELECT user.user_id, username, lastname, firstname FROM '.$tbl_user.' user
+                    WHERE (username LIKE "'.$needle.'%"
+                    OR firstname LIKE "'.$needle.'%"
+                OR lastname LIKE "'.$needle.'%") AND user.user_id<>"'.$user_anonymous.'"   AND user.status<>'.DRH.''.
+                $order_clause.
+                ' LIMIT 11';*/
+        } else {
+            $session_list = SessionManager::get_sessions_list(array('s.name LIKE' => "$needle%"));
+        }
+        $i=0;
+        if ($type=='single') {
+            /*
+            while ($user = Database :: fetch_array($rs)) {
+                $i++;
+                if ($i<=10) {
+                    $person_name = api_get_person_name($user['firstname'], $user['lastname']);
+                    $return .= '<a href="javascript: void(0);" onclick="javascript: add_user_to_session(\''.$user['user_id'].'\',\''.$person_name.' ('.$user['username'].')'.'\')">'.$person_name.' ('.$user['username'].')</a><br />';
+                } else {
+                    $return .= '...<br />';
+                }
             }
+            $xajax_response -> addAssign('ajax_list_users_single','innerHTML',api_utf8_encode($return));*/
+        } else {
+            $return .= '<select id="session_not_in_promotion" name="session_not_in_promotion_name[]" multiple="multiple" size="15" style="width:360px;">';
+            foreach ($session_list as $row ) {
+                if (!in_array($row['id'], array_keys($session_in_promotion))) {
+                    $return .= '<option value="'.$row['id'].'">'.$row['name'].'</option>';
+                }
+            }
+            $return .= '</select>';
+            $xajax_response -> addAssign('ajax_list_multiple','innerHTML',api_utf8_encode($return));
         }
         $return .= '</select>';
         $xajax_response -> addAssign('ajax_list_multiple','innerHTML',api_utf8_encode($return));
@@ -274,40 +296,8 @@ if (!empty($errorMsg)) {
 </tr>
 </table>
 </form>
+
 <script>
-function moveItem(origin , destination) {
-    for(var i = 0 ; i<origin.options.length ; i++) {
-        if(origin.options[i].selected) {
-            destination.options[destination.length] = new Option(origin.options[i].text,origin.options[i].value);
-            origin.options[i]=null;
-            i = i-1;
-        }
-    }
-    destination.selectedIndex = -1;
-    sortOptions(destination.options);
-}
-
-function sortOptions(options) {
-    newOptions = new Array();
-    for (i = 0 ; i<options.length ; i++)
-        newOptions[i] = options[i];
-
-    newOptions = newOptions.sort(mysort);
-    options.length = 0;
-    for(i = 0 ; i < newOptions.length ; i++)
-        options[i] = newOptions[i];
-}
-
-function mysort(a, b){
-    if (a.text.toLowerCase() > b.text.toLowerCase()){
-        return 1;
-    }
-    if (a.text.toLowerCase() < b.text.toLowerCase()){
-        return -1;
-    }
-    return 0;
-}
-
 function valide(){
     var options = document.getElementById('session_in_promotion').options;
     for (i = 0 ; i<options.length ; i++)

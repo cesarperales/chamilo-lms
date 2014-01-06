@@ -12,8 +12,7 @@ $action = $_GET['a'];
 
 switch ($action) {
     case 'send_message':
-        $subject = isset($_REQUEST['subject']) ? $_REQUEST['subject'] : null;
-        $result = MessageManager::send_message($_REQUEST['user_id'], $subject, $_REQUEST['content']);
+        $result = MessageManager::send_message($_REQUEST['user_id'], $_REQUEST['subject'], $_REQUEST['content']);
         if ($result) {
             echo Display::display_confirmation_message(get_lang('MessageHasBeenSent'));
         } else {
@@ -29,7 +28,7 @@ switch ($action) {
             echo '';
             break;
         }
-        $track_online_table = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_ONLINE);
+        $track_online_table = Database::get_main_table(TABLE_STATISTIC_TRACK_E_ONLINE);
         $tbl_my_user		= Database::get_main_table(TABLE_MAIN_USER);
         $tbl_my_user_friend = Database::get_main_table(TABLE_MAIN_USER_REL_USER);
         $tbl_user 			= Database::get_main_table(TABLE_MAIN_USER);
@@ -53,7 +52,9 @@ switch ($action) {
                        AND '.($is_western_name_order ? 'concat(u.firstname, " ", u.lastname)' : 'concat(u.lastname, " ", u.firstname)').' LIKE CONCAT("%","'.$search.'","%") ';
             }
         } elseif (api_get_setting('allow_social_tool')=='false' && api_get_setting('allow_message_tool')=='true') {
-            $time_limit = api_get_setting('time_limit_whosonline');
+
+			$time_limit = api_get_setting('time_limit_whosonline');
+
             $online_time 	= time() - $time_limit*60;
             $limit_date		= api_get_utc_datetime($online_time);
             $sql = 'SELECT DISTINCT u.user_id as id, '.($is_western_name_order ? 'concat(u.firstname," ",u.lastname," ","( ",u.email," )")' : 'concat(u.lastname," ",u.firstname," ","( ",u.email," )")').' as name
@@ -63,15 +64,26 @@ switch ($action) {
         $sql .=' LIMIT 20';
         $result=Database::query($sql);
 
+			$sql ='SELECT DISTINCT u.user_id as id, '.($is_western_name_order ? 'concat(u.firstname," ",u.lastname," ","( ",u.email," )")' : 'concat(u.lastname," ",u.firstname," ","( ",u.email," )")').' as name
+			 FROM '.$tbl_my_user.' u INNER JOIN '.$track_online_table.' t ON u.user_id=t.login_user_id
+			 WHERE
+			    login_date >= "'.$limit_date.'" AND
+			    '.($is_western_name_order ? 'concat(u.firstname, " ", u.lastname)' : 'concat(u.lastname, " ", u.firstname)').' LIKE CONCAT("%","'.$search.'","%") ';
+        }
+        $sql .=' LIMIT 20';
+        $result=Database::query($sql);
+        $return = array();
         if (Database::num_rows($result) > 0) {
             while ($row = Database::fetch_array($result, 'ASSOC')) {
-                $return[] = array('caption'=>$row['name'], 'value'=>$row['id']);
+                $return[] = array(
+                    'key' => $row['id'],
+                    'value' => $row['name']
+                );
             }
         }
         echo json_encode($return);
         break;
     default:
         echo '';
-
 }
 exit;

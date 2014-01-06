@@ -16,6 +16,8 @@
 $language_file='exercice';
 
 require_once '../inc/global.inc.php';
+$urlMainExercise = api_get_path(WEB_CODE_PATH).'exercice/';
+
 $this_section=SECTION_COURSES;
 api_protect_course_script(true);
 
@@ -25,15 +27,12 @@ $show=(isset($_GET['show']) && $_GET['show'] == 'result')?'result':'test'; // mo
  * Libraries
  */
 
-require_once api_get_path(LIBRARY_PATH).'document.lib.php';
-//include(api_get_path(LIBRARY_PATH).'mail.lib.inc.php');
-
 /* 	Constants and variables */
 $is_allowedToEdit = api_is_allowed_to_edit(null,true);
 $is_tutor = api_is_allowed_to_edit(true);
 
 if(!$is_allowedToEdit){
-	header('Location: /main/exercice/exercice.php?cidReq='.Security::remove_XSS($_GET['cidReq']));
+	header('Location: '.$urlMainExercise.'exercice.php?cidReq='.Security::remove_XSS($_GET['cidReq']));
 	exit;
 }
 
@@ -44,8 +43,8 @@ $interbreadcrumb[]= array ('url' => 'exercise_history.php'.'?exe_id='.intval($_G
 $TBL_USER          	    = Database::get_main_table(TABLE_MAIN_USER);
 $TBL_EXERCICES			= Database::get_course_table(TABLE_QUIZ_TEST);
 $TBL_EXERCICES_QUESTION	= Database::get_course_table(TABLE_QUIZ_QUESTION);
-$TBL_TRACK_EXERCICES	= Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
-$TBL_TRACK_ATTEMPT_RECORDING= Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_ATTEMPT_RECORDING);
+$TBL_TRACK_EXERCICES	= Database::get_main_table(TABLE_STATISTIC_TRACK_E_EXERCICES);
+$TBL_TRACK_ATTEMPT_RECORDING= Database::get_main_table(TABLE_STATISTIC_TRACK_E_ATTEMPT_RECORDING);
 Display::display_header($nameTools,get_lang('Exercise'));
 
 if (isset($_GET['message'])) {
@@ -65,14 +64,18 @@ echo '</div>';
 	<tr class="row_odd">
 		<th><?php echo get_lang('Question'); ?></th>
 		<th width="50px"><?php echo get_lang('Value'); ?></th>
-		<th><?php echo get_lang('Feedback'); ?></th>		  
+		<th><?php echo get_lang('Feedback'); ?></th>
 		<th><?php echo get_lang('Author'); ?></th>
 		<th width="160px"><?php echo get_lang('Date'); ?></th>
 	</tr>
 <?php
 
-$sql = "SELECT *, quiz_question.question, firstname, lastname FROM $TBL_TRACK_ATTEMPT_RECORDING t, $TBL_USER,$TBL_EXERCICES_QUESTION quiz_question
-		WHERE quiz_question.id = question_id AND user_id = author AND exe_id = '".(int)$_GET['exe_id']."' ORDER BY position";
+$sql = "SELECT *, quiz_question.question, firstname, lastname
+        FROM $TBL_TRACK_ATTEMPT_RECORDING t, $TBL_USER, $TBL_EXERCICES_QUESTION quiz_question
+		WHERE   quiz_question.id = question_id AND
+                user_id = author AND
+                exe_id = '".(int)$_GET['exe_id']."'
+        ORDER BY position";
 $query = Database::query($sql);
 while($row = Database::fetch_array($query)){
 	echo '<tr';

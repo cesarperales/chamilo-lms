@@ -65,12 +65,9 @@ function modify_filter($class_id) {
     $result = '<a href="class_information.php?id='.$class_id.'">'.Display::return_icon('synthese_view.gif', get_lang('Info')).'</a>';
     $result .= ' <a href="class_edit.php?idclass='.$class_id.'">'.Display::return_icon('edit.png', get_lang('Edit')).'</a>';
     $result .= ' <a href="subscribe_user2class.php?idclass='.$class_id.'">'.Display::return_icon('add_multiple_users.gif', get_lang('AddUsersToAClass')).'</a>';
-    $result .= ' <a href="class_list.php?action=delete_class&amp;class_id='.$class_id.'" onclick="javascript: if(!confirm('."'".addslashes(api_htmlentities(get_lang("ConfirmYourChoice"), ENT_QUOTES))."'".')) return false;">'.Display::return_icon('delete.png', get_lang('Delete')).'</a>';
+    $result .= ' <a href="class_list.php?action=delete_class&amp;class_id='.$class_id.'" onclick="javascript: if(!confirm('."'".addslashes(get_lang("ConfirmYourChoice"))."'".')) return false;">'.Display::return_icon('delete.png', get_lang('Delete')).'</a>';
     return $result;
 }
-
-require api_get_path(LIBRARY_PATH).'fileManage.lib.php';
-require api_get_path(LIBRARY_PATH).'classmanager.lib.php';
 
 $tool_name = get_lang('ClassList');
 $interbreadcrumb[] = array ('url' => 'index.php', 'name' => get_lang('PlatformAdmin'));
@@ -126,7 +123,8 @@ $actions .= Display::url(Display::return_icon('add.png', get_lang('Add'), array(
 $actions .= Display::url(Display::return_icon('import_csv.png', get_lang('AddUsersToAClass'), array(), ICON_SIZE_MEDIUM), 'class_user_import.php');
 $actions .= Display::url(Display::return_icon('import_csv.png', get_lang('ImportClassListCSV'), array(), ICON_SIZE_MEDIUM), 'class_import.php');
 
-$tpl = new Template($tool_name);
+$app['title'] = $tool_name;
+$tpl = $app['template'];
 $tpl->assign('content', $content);
 $tpl->assign('actions', $actions);
 $tpl->assign('message', $message);

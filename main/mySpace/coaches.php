@@ -39,11 +39,7 @@ $tbl_session 						= Database :: get_main_table(TABLE_MAIN_SESSION);
 $tbl_session_rel_course 			= Database :: get_main_table(TABLE_MAIN_SESSION_COURSE);
 $tbl_session_rel_course_rel_user 	= Database :: get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
 $tbl_session_rel_user 				= Database :: get_main_table(TABLE_MAIN_SESSION_USER);
-$tbl_track_login 					= Database :: get_statistic_table(TABLE_STATISTIC_TRACK_E_LOGIN);
-
-/**
- * MAIN PART
- */
+$tbl_track_login 					= Database :: get_main_table(TABLE_STATISTIC_TRACK_E_LOGIN);
 
 if (isset($_POST['export'])) {
 	$order_clause = api_is_western_name_order(PERSON_NAME_DATA_EXPORT) ? ' ORDER BY firstname, lastname' : ' ORDER BY lastname, firstname';
@@ -63,9 +59,11 @@ if (isset($_GET["id_student"])) {
 			WHERE srcru.id_user=user_id AND srcru.status=2 ".$order_clause;
 	} else {
 		$sql_coachs = "SELECT DISTINCT id_user as id_coach, $tbl_user.user_id, lastname, firstname
-			FROM $tbl_user as user, $tbl_session_rel_course_user as srcu, $tbl_course_user as course_rel_user
-			WHERE course_rel_user.course_code=srcu.course_code AND course_rel_user.status='1' AND course_rel_user.user_id='".intval($_SESSION["_uid"])."'
-			AND srcu.id_user=user.user_id AND srcu.status=2 ".$order_clause;
+			FROM $tbl_user as user, $tbl_session_rel_course_user as srcu, $tbl_course_user as course_rel_user, $tbl_course course
+			WHERE   course_rel_user.c_id = course.id AND srcu.c_id = course.id AND
+			        course_rel_user.status='1' AND
+			        course_rel_user.user_id='".api_get_user_id()."' AND
+			        srcu.id_user=user.user_id AND srcu.status=2 ".$order_clause;
 	}
 }
 
@@ -105,7 +103,7 @@ if (Database::num_rows($result_coachs) > 0) {
 		$id_coach = $coachs["id_coach"];
 
 		if (isset($_GET["id_student"])) {
-			$sql_infos_coach = "SELECT lastname, firstname FROM $tbl_user WHERE user_id='$id_coach'";
+			$sql_infos_coach = "SELECT lastname, firstname FROM $tbl_user WHERE user_id = '$id_coach'";
 			$result_coachs_infos = Database::query($sql_infos_coach);
 			$lastname = Database::result($result_coachs_infos, 0, "lastname");
 			$firstname = Database::result($result_coachs_infos, 0, "firstname");

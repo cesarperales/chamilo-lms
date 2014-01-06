@@ -32,10 +32,10 @@ require_once '../newscorm/scormItem.class.php';
 /* Constants and variables */
 
 // regroup table names for maintenance purpose
-$TABLETRACK_ACCESS = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_LASTACCESS);
-$TABLETRACK_LINKS = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_LINKS);
-$TABLETRACK_DOWNLOADS = Database::get_statistic_table(TABLE_STATISTIC_TRACK_E_DOWNLOADS);
-$TABLETRACK_ACCESS_2 = Database::get_statistic_table("track_e_access");
+$TABLETRACK_ACCESS = Database::get_main_table(TABLE_STATISTIC_TRACK_E_LASTACCESS);
+$TABLETRACK_LINKS = Database::get_main_table(TABLE_STATISTIC_TRACK_E_LINKS);
+$TABLETRACK_DOWNLOADS = Database::get_main_table(TABLE_STATISTIC_TRACK_E_DOWNLOADS);
+$TABLETRACK_ACCESS_2 = Database::get_main_table("track_e_access");
 $TABLECOURSUSER = Database::get_main_table(TABLE_MAIN_COURSE_USER);
 $TABLECOURSE = Database::get_main_table(TABLE_MAIN_COURSE);
 $table_user = Database::get_main_table(TABLE_MAIN_USER);
@@ -68,9 +68,9 @@ if ($view == "00000010")
 $interbreadcrumb[] = array("url" => api_get_self() . "?view=0000000", "name" => get_lang('ToolName'));
 
 include(api_get_path(LIBRARY_PATH) . "statsUtils.lib.inc.php");
-include("../resourcelinker/resourcelinker.inc.php");
+require_once api_get_path(SYS_CODE_PATH).'resourcelinker/resourcelinker.inc.php';
 
-$is_allowedToTrack = $is_courseAdmin || $is_platformAdmin || api_is_drh();
+$is_allowedToTrack = api_is_course_admin() || api_is_platform_admin() || api_is_drh();
 
 /* 	MAIN CODE */
 
@@ -118,11 +118,11 @@ if ($is_allowedToTrack) {
                 // BEGIN % visited
                 // sum of all items (= multiple learningpaths + SCORM imported paths)
                 $sql = "SELECT COUNT(DISTINCT(iv.lp_item_id)) FROM $tbl_learnpath_item_view iv " .
-                        "INNER JOIN $tbl_learnpath_view v 
+                        "INNER JOIN $tbl_learnpath_view v
                         ON iv.lp_view_id = v.id " .
                         "WHERE
                         	v.c_id = $course_id AND
-                        	iv.c_id = $course_id AND                        	 
+                        	iv.c_id = $course_id AND
                 		v.user_id = " . $results[$j][0];
                 $total_lpath_items = getOneResult($sql);
 
@@ -130,7 +130,7 @@ if ($is_allowedToTrack) {
                 $sql = "SELECT COUNT(DISTINCT(iv.lp_item_id)) " .
                         "FROM $tbl_learnpath_item_view iv " .
                         "INNER JOIN $tbl_learnpath_view v ON iv.lp_view_id = v.id " .
-                        "WHERE 
+                        "WHERE
                         	v.c_id = $course_id AND
                         	iv.c_id = $course_id AND
                         	v.user_id = " . $results[$j][0] . " " .
@@ -143,12 +143,13 @@ if ($is_allowedToTrack) {
                 // END % visited
                 // BEGIN first/last access
                 // first access
-                $sql = "SELECT access_date FROM $TABLETRACK_ACCESS_2 WHERE access_user_id = '" . $results[$j][0] . "' AND access_cours_code = '" . $_course['official_code'] . "' AND access_tool = 'learnpath' AND access_session_id = '" . api_get_session_id() . "' ORDER BY access_id ASC LIMIT 1";
+                $sql = "SELECT access_date FROM $TABLETRACK_ACCESS_2
+                        WHERE access_user_id = '" . $results[$j][0] . "' AND c_id = '" . $_course['id'] . "' AND access_tool = 'learnpath' AND access_session_id = '" . api_get_session_id() . "' ORDER BY access_id ASC LIMIT 1";
                 $first_access = getOneResult($sql);
                 $first_access = empty($first_access) ? "-" : date('d.m.y', strtotime($first_access));
 
                 // last access
-                $sql = "SELECT access_date FROM $TABLETRACK_ACCESS WHERE access_user_id = '" . $results[$j][0] . "' AND access_cours_code = '" . $_course['official_code'] . "' AND access_tool = 'learnpath'";
+                $sql = "SELECT access_date FROM $TABLETRACK_ACCESS WHERE access_user_id = '" . $results[$j][0] . "' AND c_id = '" . $_course['id'] . "' AND access_tool = 'learnpath'";
                 $last_access = getOneResult($sql);
                 $last_access = empty($last_access) ? "-" : date('d.m.y', strtotime($last_access));
                 // END first/last access
@@ -203,7 +204,7 @@ if ($is_allowedToTrack) {
         // last 31 days
         $sql = "SELECT count(*)
                     FROM $TABLETRACK_ACCESS
-                    WHERE access_cours_code = '$_cid'
+                    WHERE c_id = '$course_id'
                         AND (access_date > DATE_ADD(CURDATE(), INTERVAL -31 DAY))
                         AND access_tool IS NULL";
         $count = getOneResult($sql);
@@ -213,7 +214,7 @@ if ($is_allowedToTrack) {
         // last 7 days
         $sql = "SELECT count(*)
                     FROM $TABLETRACK_ACCESS
-                    WHERE access_cours_code = '$_cid'
+                    WHERE c_id = '$course_id'
                         AND (access_date > DATE_ADD(CURDATE(), INTERVAL -7 DAY))
                         AND access_tool IS NULL";
         $count = getOneResult($sql);
@@ -230,8 +231,6 @@ if ($is_allowedToTrack) {
         $line .= get_lang('Thisday') . " ; " . $count . "\n";
     }
 
-
-
     /* 	Tools */
     $tempView = $view;
     if ($view[2] == '1') {
@@ -245,8 +244,7 @@ if ($is_allowedToTrack) {
 
         $sql = "SELECT access_tool, COUNT(DISTINCT access_user_id),count( access_tool )
                 FROM $TABLETRACK_ACCESS
-                WHERE access_tool IS NOT NULL
-                    AND access_cours_code = '$_cid'
+                WHERE access_tool IS NOT NULL AND c_id = '$course_id'
                 GROUP BY access_tool";
 
         $results = getManyResults3Col($sql);
@@ -272,8 +270,8 @@ if ($is_allowedToTrack) {
                     FROM $TABLETRACK_LINKS AS sl, $TABLECOURSE_LINKS AS cl
                     WHERE
                     	cl.c_id = $course_id AND
-                    	sl.links_link_id = cl.id AND 
-                    	sl.links_cours_id = '$_cid'
+                    	sl.links_link_id = cl.id AND
+                    	sl.c_id = '$course_id'
                     GROUP BY cl.title, cl.url";
 
         $results = getManyResultsXCol($sql, 4);
@@ -301,7 +299,7 @@ if ($is_allowedToTrack) {
 
         $sql = "SELECT down_doc_path, COUNT(DISTINCT down_user_id), COUNT(down_doc_path)
                     FROM $TABLETRACK_DOWNLOADS
-                    WHERE down_cours_id = '$_cid'
+                    WHERE c_id = '$course_id'
                     GROUP BY down_doc_path";
 
         $results = getManyResults3Col($sql);
@@ -349,7 +347,7 @@ if ($is_allowedToTrack) {
                             "INNER JOIN $table_user u " .
                             "ON u.user_id = sd.user_id " .
                             "WHERE sd.c_id = $course_id AND sd.lp_id=$contentId group by u.user_id";
-                    //error_log($sql2,0);
+
                     $result2 = Database::query($sql2);
 
                     if (Database::num_rows($result2) > 0) {
@@ -371,7 +369,7 @@ if ($is_allowedToTrack) {
                                         "FROM $tbl_learnpath_item i " .
                                         "INNER JOIN $tbl_learnpath_item_view iv ON i.id=iv.lp_item_id " .
                                         "INNER JOIN $tbl_learnpath_view v ON iv.lp_view_id=v.id " .
-                                        "WHERE 	i.c_id = $course_id AND 
+                                        "WHERE 	i.c_id = $course_id AND
                                         		iv.c_id = $course_id AND
                                         		v.c_id = $course_id AND
                                 				v.user_id=$studentId and v.lp_id=$contentId ORDER BY v.id, i.id";
@@ -379,7 +377,6 @@ if ($is_allowedToTrack) {
                                 $ar3 = Database::fetch_array($result3);
                                 $title_line .= get_lang('ScormTitleColumn') . ";" . get_lang('ScormStatusColumn') . ";" . get_lang('ScormScoreColumn') . ";" . get_lang('ScormTimeColumn');
                                 while ($ar3['status'] != '') {
-                                    require_once '../newscorm/learnpathItem.class.php';
                                     $time = learnpathItem::get_scorm_time('php', $ar3['total_time']);
                                     $line .= $title . ";" . $ar3['status'] . ";" . $ar3['score'] . ";" . $time;
                                     $ar3 = Database::fetch_array($result3);
@@ -407,7 +404,7 @@ if ($is_allowedToTrack) {
     //header('Content-Type: application/force-download');
     header('Content-length: ' . $len);
     $filename = api_html_entity_decode(str_replace(":", "", str_replace(" ", "_", $title[0] . '_' . $title[1] . '.csv')));
-    $filename = replace_dangerous_char($filename);
+    $filename = api_replace_dangerous_char($filename);
     if (preg_match("/MSIE 5.5/", $_SERVER['HTTP_USER_AGENT'])) {
         header('Content-Disposition: filename= ' . $filename);
     } else {

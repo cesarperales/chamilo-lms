@@ -9,7 +9,8 @@
  * Code
  * @package chamilo.auth
  */
-class CoursesController { // extends Controller {
+class CoursesController
+{
 
     private $toolname;
     private $view;
@@ -18,11 +19,12 @@ class CoursesController { // extends Controller {
     /**
      * Constructor
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->toolname = 'auth';
         $actived_theme_path = api_get_template();
         $this->view = new View($this->toolname, $actived_theme_path);
-        $this->model = new Auth();
+        $this->model = new AuthLib();
     }
 
     /**
@@ -31,7 +33,8 @@ class CoursesController { // extends Controller {
      * @param string   	action
      * @param string    confirmation message(optional)
      */
-    public function courses_list($action, $message = '') {
+    public function courses_list($action, $message = '')
+    {
         $data = array();
         $user_id = api_get_user_id();
 
@@ -39,9 +42,7 @@ class CoursesController { // extends Controller {
         $data['user_course_categories']   = $this->model->get_user_course_categories();
         $data['courses_in_category']      = $this->model->get_courses_in_category();
         $data['all_user_categories']      = $this->model->get_user_course_categories();
-
         $data['action'] = $action;
-
         $data['message'] = $message;
 
         // render to the view
@@ -59,7 +60,8 @@ class CoursesController { // extends Controller {
      * @param string    confirmation message(optional)
      * @param string    error message(optional)
      */
-    public function categories_list($action, $message='', $error='') {
+    public function categories_list($action, $message='', $error='')
+    {
         $data = array();
         $data['user_course_categories'] = $this->model->get_user_course_categories();
         $data['action'] = $action;
@@ -74,12 +76,26 @@ class CoursesController { // extends Controller {
     }
 
     /**
+     * @return FormValidator
+     */
+    private function getSearchForm()
+    {
+        $form = new FormValidator('form-search', 'post', api_get_self().'?action=subscribe&amp;hidden_links=0', null, array('class' => 'form-search'));
+
+        $form->addElement('hidden', 'search_course', '1');
+        $form->addElement('text', 'search_term');
+        $form->addElement('button', 'submit', get_lang('Search'));
+        return $form;
+    }
+
+    /**
      * It's used for listing courses with categories,
      * render to courses_categories view
      * @param string   	action
      * @param string    Category code (optional)
      */
-    public function courses_categories($action, $category_code = null, $message = '', $error = '', $content = null) {
+    public function courses_categories($action, $category_code = null, $message = '', $error = '', $content = null)
+    {
         $data = array();
         $browse_course_categories = $this->model->browse_course_categories();
 
@@ -92,6 +108,7 @@ class CoursesController { // extends Controller {
             $data['browse_courses_in_category'] = $this->model->browse_courses_in_category($category_code);
         }
 
+        $data['search_form'] = $this->getSearchForm();
         $data['browse_course_categories'] = $browse_course_categories;
         $data['code'] = Security::remove_XSS($category_code);
 
@@ -134,15 +151,16 @@ class CoursesController { // extends Controller {
      * @param string $error
      * @param string $content
      */
-    public function search_courses($search_term, $message = '', $error = '', $content = null) {
+    public function search_courses($search_term, $message = '', $error = '')
+    {
 
         $data = array();
-
         $browse_course_categories = $this->model->browse_course_categories();
 
         $data['browse_courses_in_category'] = $this->model->search_courses($search_term);
         $data['browse_course_categories']   = $browse_course_categories;
 
+        $data['search_form'] = $this->getSearchForm();
         $data['search_term'] = Security::remove_XSS($search_term); //filter before showing in template
 
         // getting all the courses to which the user is subscribed to
@@ -181,11 +199,11 @@ class CoursesController { // extends Controller {
             $error = get_lang('SubscribingNotAllowed');
             //$message = get_lang('SubscribingNotAllowed');
         } else {
-            $result = $this->model->subscribe_user($course_code);
-            if (!$result) {
-                $error = get_lang('CourseRegistrationCodeIncorrect');
-            } else {
-                // Redirect directly to the course after subscription
+        $result = $this->model->subscribe_user($course_code);
+        if (!$result) {
+            $error = get_lang('CourseRegistrationCodeIncorrect');
+        } else {
+                //Redirect directly to the course after subscription
                 $message = $result['message'];
                 $content = $result['content'];
             }
@@ -219,8 +237,8 @@ class CoursesController { // extends Controller {
      * @param string    Course code
      * @param int    Category id
      */
-    public function change_course_category($course_code, $category_id) {
-        $result = $this->model->store_changecoursecategory($course_code, $category_id);
+    public function change_course_category($courseId, $category_id) {
+        $result = $this->model->store_changecoursecategory($courseId, $category_id);
         $message = '';
         if ($result) { $message = get_lang('EditCourseCategorySucces'); }
         $action = 'sortmycourses';
@@ -288,8 +306,9 @@ class CoursesController { // extends Controller {
      * render to listing view
      * @param string    Course code
      */
-    public function unsubscribe_user_from_course($course_code, $search_term = null, $category_code = null) {
-        $result = $this->model->remove_user_from_course($course_code);
+    public function unsubscribe_user_from_course($courseCode, $search_term = null, $category_code = null) {
+        $courseInfo = api_get_course_info($courseCode);
+        $result = $this->model->remove_user_from_course($courseInfo['real_id']);
         $message = '';
         if ($result) { $message = get_lang('YouAreNowUnsubscribed'); }
         $action = 'sortmycourses';

@@ -16,7 +16,6 @@ define('FRAME', 'hidden');
 $language_file = array('chat');
 
 require_once '../inc/global.inc.php';
-require_once api_get_path(LIBRARY_PATH).'groupmanager.lib.php';
 require_once 'chat_functions.lib.php';
 
 $tbl_user 				= Database::get_main_table(TABLE_MAIN_USER);
@@ -30,7 +29,7 @@ $result = Database::query($query);
 list($pseudo_user) = Database::fetch_row($result);
 
 $isAllowed = !(empty($pseudo_user) || !$_cid);
-$isMaster = (bool)$is_courseAdmin;
+$isMaster = (bool)api_is_course_admin();
 
 $date_now = date('Y-m-d');
 

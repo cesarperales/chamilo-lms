@@ -19,11 +19,11 @@ define('FOLDER','folder');
  */
 class Document extends Resource
 {
-	var $path;
-	var $comment;
-	var $file_type;
-	var $size;
-	var $title;
+	public $path;
+	public $comment;
+	public $file_type;
+	public $size;
+	public $title;
 	/**
 	 * Create a new Document
 	 * @param int $id
@@ -35,7 +35,7 @@ class Document extends Resource
 	 */
 	function Document($id,$path,$comment,$title,$file_type,$size)
 	{
-		parent::Resource($id,RESOURCE_DOCUMENT);
+		parent::Resource($id, RESOURCE_DOCUMENT);
 		$this->path = 'document'.$path;
 		$this->comment = $comment;
 		$this->title = $title;

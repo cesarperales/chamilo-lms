@@ -52,13 +52,19 @@ if ($dokeos_chapter) {
     switch ($lp_type) {
         case 1:
             $_SESSION['oLP']->stop_previous_item();
-            $prereq_check = $_SESSION['oLP']->prerequisites_match($lp_item_id);
-            if ($prereq_check === true) {
-                $src = $_SESSION['oLP']->get_link('http', $lp_item_id);
-                $_SESSION['oLP']->start_current_item(); // starts time counter manually if asset
+            $check_attempts = $_SESSION['oLP']->check_item_attempts($lp_item_id);
+            if ($check_attempts) {
+                $prereq_check = $_SESSION['oLP']->prerequisites_match($lp_item_id);
+                if ($prereq_check === true) {
+                    $src = $_SESSION['oLP']->get_link('http', $lp_item_id);
+                    $_SESSION['oLP']->start_current_item(); // starts time counter manually if asset
+                } else {
+                    $src = 'blank.php?error=prerequisites';
+                }
             } else {
-                $src = 'blank.php?error=prerequisites';
+                $src = 'blank.php?error=max_attempt_reached';
             }
+
             break;
         case 2:
             $_SESSION['oLP']->stop_previous_item();
@@ -111,5 +117,6 @@ $_setting['show_navigation_menu'] = false;
 if ($debug > 0) {
     error_log('New LP - In lp_content.php - Loading '.$src, 0);
 }
+
 header("Location: ".urldecode($src));
 exit;
